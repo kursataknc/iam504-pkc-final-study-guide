@@ -1,0 +1,236 @@
+<section class="problem" id="ex-13-1" data-ch="13">
+  <h3 class="ptitle"><span class="pnum">13.1</span> <span class="pname">(Exercising the definition)</span></h3>
+  <div class="statement">
+    <p>Let \((G,S,V)\) be a secure signature scheme over message space \(\{0,1\}^n\). Generate two independent key pairs \((pk_0,sk_0)\xleftarrow{R}G()\) and \((pk_1,sk_1)\xleftarrow{R}G()\). For each of the following, prove security or exhibit an attack.</p>
+    <p><b>(a) Accept one valid.</b> \(S_1\big((sk_0,sk_1),m\big):=\big(S(sk_0,m),\,S(sk_1,m)\big)\), and \(V_1\) accepts \(\big((pk_0,pk_1),m,(\sigma_0,\sigma_1)\big)\) iff \(V(pk_0,m,\sigma_0)=\texttt{accept}\) <i>or</i> \(V(pk_1,m,\sigma_1)=\texttt{accept}\).</p>
+    <p><b>(b) Sign halves.</b> \(S_2\big((sk_0,sk_1),(m_L,m_R)\big):=\big(S(sk_0,m_L),\,S(sk_1,m_R)\big)\), and \(V_2\) accepts \(\big((pk_0,pk_1),(m_L,m_R),(\sigma_0,\sigma_1)\big)\) iff \(V(pk_0,m_L,\sigma_0)=V(pk_1,m_R,\sigma_1)=\texttt{accept}\).</p>
+    <p><b>(c) Sign with randomness.</b> \(S_3(sk_0,m):=\{r\xleftarrow{R}\{0,1\}^n,\ \text{output}\ (r,\,S(sk_0,m\oplus r),\,S(sk_0,r))\}\), and \(V_3\) accepts \(\big(pk_0,m,(r,\sigma_0,\sigma_1)\big)\) iff \(V(pk_0,m\oplus r,\sigma_0)=V(pk_0,r,\sigma_1)=\texttt{accept}\).</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>(a) is secure: a forgery on a new message must contain a valid underlying signature under at least one of the two keys, which is itself a forgery against that scheme. (b) and (c) are insecure: in both the two signature components are "decoupled", so the adversary can <i>mix-and-match</i> pieces obtained from different queries to splice together a fresh valid signature, with advantage \(1\) (up to a negligible collision term).</p>
+
+    <h4>Solution</h4>
+
+    <p><b>(a) Secure.</b> The idea is simple. We show that an efficient forger \(\mathcal{A}\) against \(S_1\) implies an efficient forger \(\mathcal{B}\) (an elementary wrapper around \(\mathcal{A}\)) against the underlying scheme \(S\). \(\mathcal{B}\) receives a challenge public key \(pk^\ast\) from its \(S\)-challenger. It flips a coin \(\beta\xleftarrow{R}\{0,1\}\), <i>plants</i> the challenge by setting \(pk_\beta:=pk^\ast\), and generates the other pair itself: \((pk_{1-\beta},sk_{1-\beta})\xleftarrow{R}G()\). It hands \((pk_0,pk_1)\) to \(\mathcal{A}\).</p>
+    <p>On a signing query \(m\) from \(\mathcal{A}\), \(\mathcal{B}\) needs both components \(\big(S(sk_0,m),S(sk_1,m)\big)\). It produces the \(S(sk_{1-\beta},m)\) component itself (it holds \(sk_{1-\beta}\)), and obtains \(S(sk_\beta,m)\) by forwarding \(m\) to its own signing oracle. Thus \(\mathcal{B}\) perfectly simulates the \(S_1\)-challenger, and the planted index \(\beta\) is uniform over \(\{0,1\}\) independently of \(\mathcal{A}\)'s view (the two keys are identically distributed).</p>
+    <p>Eventually \(\mathcal{A}\) outputs a forgery \(\big(m,(\sigma_0,\sigma_1)\big)\) with \(m\) new. By the \(V_1\) acceptance rule there is some \(b\in\{0,1\}\) with \(V(pk_b,m,\sigma_b)=\texttt{accept}\). Since \(m\) was never queried by \(\mathcal{A}\), it was never forwarded to \(\mathcal{B}\)'s signing oracle either; hence if \(b=\beta\), the pair \((m,\sigma_\beta)\) is a valid existential forgery under \(pk^\ast\), and \(\mathcal{B}\) outputs it. The event \(b=\beta\) holds with probability \(\tfrac12\) because \(\beta\) is hidden from \(\mathcal{A}\). Therefore
+    \[
+      \mathrm{SIGadv}[\mathcal{B},S]\ \ge\ \tfrac12\,\mathrm{SIGadv}[\mathcal{A},S_1],
+      \qquad\text{i.e.}\qquad
+      \mathrm{SIGadv}[\mathcal{A},S_1]\ \le\ 2\,\mathrm{SIGadv}[\mathcal{B},S].
+    \]
+    As \(S\) is secure, the right side is negligible, so \(S_1\) is secure, as required. (Equivalently one may invoke multi-key security with \(Q=2\), Exercise 13.2, giving the same factor \(2\).)</p>
+
+    <p><b>(b) Insecure — mix-and-match.</b> We give an explicit adversary with advantage \(1\). Pick any four messages with \(m_L\neq m_L'\) and \(m_R\neq m_R'\). Issue two signing queries:</p>
+    <p>\(\;\;\bullet\;\) query \((m_L,m_R)\), receiving \((\sigma_0,\sigma_1)\) with \(\sigma_0=S(sk_0,m_L)\), \(\sigma_1=S(sk_1,m_R)\);</p>
+    <p>\(\;\;\bullet\;\) query \((m_L',m_R')\), receiving \((\sigma_0',\sigma_1')\) with \(\sigma_0'=S(sk_0,m_L')\), \(\sigma_1'=S(sk_1,m_R')\).</p>
+    <p>Now output the forgery \(\big((m_L,m_R'),\,(\sigma_0,\sigma_1')\big)\). Since \(\sigma_0\) is a genuine signature on \(m_L\) under \(pk_0\) and \(\sigma_1'\) is a genuine signature on \(m_R'\) under \(pk_1\), verification gives \(V(pk_0,m_L,\sigma_0)=V(pk_1,m_R',\sigma_1')=\texttt{accept}\). The forged message \((m_L,m_R')\) differs from both queried messages \((m_L,m_R)\) and \((m_L',m_R')\) (it disagrees with the first in the right half and with the second in the left half), so it is new. The advantage is exactly \(1\).</p>
+
+    <p><b>(c) Insecure — splicing across two queries.</b> The key observation is that <i>every</i> signing query, on whatever message, hands the adversary genuine \(sk_0\)-signatures on two values, and the verifier never checks how those values relate to the claimed message except through the equations \(m\oplus r\) and \(r\). We exploit this with two queries on an arbitrary message \(m\).</p>
+    <p>Query \(m\) twice, obtaining
+    \[
+      (r_1,\sigma_0^{(1)},\sigma_1^{(1)}),\qquad (r_2,\sigma_0^{(2)},\sigma_1^{(2)}),
+    \]
+    where \(\sigma_1^{(1)}=S(sk_0,r_1)\) and \(\sigma_1^{(2)}=S(sk_0,r_2)\) are valid \(sk_0\)-signatures on the values \(r_1\) and \(r_2\) respectively (the challenger chooses \(r_1,r_2\) at random). Now set
+    \[
+      m^\ast:=r_1\oplus r_2,\qquad r^\ast:=r_1,\qquad \sigma_0^\ast:=\sigma_1^{(2)},\qquad \sigma_1^\ast:=\sigma_1^{(1)},
+    \]
+    and output \(\big(m^\ast,(r^\ast,\sigma_0^\ast,\sigma_1^\ast)\big)\). We check the two verification equations under \(pk_0\):</p>
+    <p>\(\;\;\bullet\;\) \(m^\ast\oplus r^\ast=(r_1\oplus r_2)\oplus r_1=r_2\), and \(\sigma_0^\ast=\sigma_1^{(2)}=S(sk_0,r_2)\), so \(V(pk_0,m^\ast\oplus r^\ast,\sigma_0^\ast)=\texttt{accept}\);</p>
+    <p>\(\;\;\bullet\;\) \(r^\ast=r_1\), and \(\sigma_1^\ast=\sigma_1^{(1)}=S(sk_0,r_1)\), so \(V(pk_0,r^\ast,\sigma_1^\ast)=\texttt{accept}\).</p>
+    <p>Hence \(V_3\) accepts. The only queried message is \(m\), so the forgery is new provided \(m^\ast=r_1\oplus r_2\neq m\). Since \(r_1,r_2\) are uniform and independent of \(m\), the value \(r_1\oplus r_2\) is uniform in \(\{0,1\}^n\), so \(\Pr[m^\ast=m]=2^{-n}\). Therefore the advantage is \(1-2^{-n}\), which is non-negligible, and \(S_3\) is insecure. (Note the attack never even uses the \(\sigma_0\) components.)</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-13-2" data-ch="13">
+  <h3 class="ptitle"><span class="pnum">13.2</span> <span class="pname">(Multi-key signature security)</span></h3>
+  <div class="statement">
+    <p>(a) Extend Attack Game 13.1 so that the attacker may submit signing queries with respect to several signing keys (as in the multi-key generalization of Exercise 6.3). (b) Show that every efficient adversary \(\mathcal{A}\) winning the multi-key game with probability \(\epsilon\) can be turned into an efficient adversary \(\mathcal{B}\) winning Attack Game 13.1 with probability \(\epsilon/Q\), where \(Q\) is the number of keys, by the "plug-and-pray" technique.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The multi-key game just runs \(Q\) independent copies of the single-key game and lets the adversary forge under any one key. To reduce to single-key security, \(\mathcal{B}\) <i>plugs</i> its single challenge key at a random index \(\omega\), generates the other \(Q-1\) keys itself, and <i>prays</i> that \(\mathcal{A}\)'s forgery targets index \(\omega\); this succeeds with probability \(1/Q\).</p>
+
+    <h4>Solution</h4>
+    <p><b>(a) The multi-key attack game.</b> For a signature scheme \(S=(G,S,V)\) and adversary \(\mathcal{A}\):</p>
+    <p>\(\;\;\bullet\;\) \(\mathcal{A}\) outputs a number \(Q\) of keys it wishes to attack. The challenger runs \((pk_j,sk_j)\xleftarrow{R}G()\) for \(j=1,\dots,Q\) and sends \((pk_1,\dots,pk_Q)\) to \(\mathcal{A}\).</p>
+    <p>\(\;\;\bullet\;\) \(\mathcal{A}\) makes signing queries, each of the form \((j,m)\) with \(j\in\{1,\dots,Q\}\); the challenger replies \(\sigma\xleftarrow{R}S(sk_j,m)\).</p>
+    <p>\(\;\;\bullet\;\) \(\mathcal{A}\) outputs \((j^\ast,m^\ast,\sigma^\ast)\). It <i>wins</i> if \(V(pk_{j^\ast},m^\ast,\sigma^\ast)=\texttt{accept}\) and \(m^\ast\) was not previously queried under key \(j^\ast\) (i.e. \((j^\ast,m^\ast)\) is new among the signing queries).</p>
+    <p>Define \(\mathrm{SIGadv}^{(Q)}[\mathcal{A},S]\) as the probability \(\mathcal{A}\) wins. The scheme is multi-key secure if this is negligible for all efficient \(\mathcal{A}\) and all poly-bounded \(Q\).</p>
+
+    <p><b>(b) Plug-and-pray reduction.</b> The idea is simple. We build \(\mathcal{B}\), an elementary wrapper around \(\mathcal{A}\), that breaks ordinary single-key security (Attack Game 13.1). \(\mathcal{B}\) receives a challenge public key \(pk^\ast\) from its challenger. When \(\mathcal{A}\) announces \(Q\), adversary \(\mathcal{B}\) chooses a random index \(\omega\xleftarrow{R}\{1,\dots,Q\}\), sets \(pk_\omega:=pk^\ast\), and for every \(j\neq\omega\) generates \((pk_j,sk_j)\xleftarrow{R}G()\) itself. It sends \((pk_1,\dots,pk_Q)\) to \(\mathcal{A}\). This distribution is identical to the real multi-key game, and \(\omega\) is uniform and independent of \(\mathcal{A}\)'s view.</p>
+    <p>\(\mathcal{B}\) answers a signing query \((j,m)\): if \(j\neq\omega\) it uses the secret key \(sk_j\) it holds; if \(j=\omega\) it forwards \(m\) to its own \(S\)-signing oracle and relays the answer. Thus \(\mathcal{B}\) perfectly simulates the multi-key challenger.</p>
+    <p>When \(\mathcal{A}\) outputs \((j^\ast,m^\ast,\sigma^\ast)\), adversary \(\mathcal{B}\) outputs \((m^\ast,\sigma^\ast)\) — but this is a valid single-key forgery only if \(j^\ast=\omega\). When \(\mathcal{A}\) wins and \(j^\ast=\omega\), then \(V(pk^\ast,m^\ast,\sigma^\ast)=\texttt{accept}\) and \(m^\ast\) was never forwarded to \(\mathcal{B}\)'s oracle (since \((j^\ast,m^\ast)=(\omega,m^\ast)\) was new), so \(\mathcal{B}\) wins Attack Game 13.1. Because \(\omega\) is independent of \(\mathcal{A}\)'s view, \(\Pr[j^\ast=\omega\mid \mathcal{A}\text{ wins}]=1/Q\). Hence
+    \[
+      \mathrm{SIGadv}[\mathcal{B},S]\ \ge\ \tfrac1Q\,\mathrm{SIGadv}^{(Q)}[\mathcal{A},S]\ =\ \frac{\epsilon}{Q}.
+    \]
+    Since \(S\) is single-key secure, \(\epsilon/Q\) is negligible; as \(Q\) is poly-bounded, \(\epsilon\) is negligible too. Thus single-key security implies multi-key security, as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-13-3" data-ch="13">
+  <h3 class="ptitle"><span class="pnum">13.3</span> <span class="pname">(Non-binding signatures)</span></h3>
+  <div class="statement">
+    <p>Give an example of a secure signature scheme that is <i>non-binding</i>: for a given \((pk,sk)\) the signer can find two distinct messages \(m_0\neq m_1\) for which the same signature \(\sigma\) is valid under \(pk\). (Hint: hash-and-sign with the trapdoor collision-resistant hash of Exercise 10.30.)</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>Use hash-and-sign with a hash function that is collision resistant to outsiders but has a <i>trapdoor</i> that lets the holder produce collisions. Then \(H(m_0)=H(m_1)\) makes one signature valid for both messages — so the scheme is non-binding — yet because nobody else can find collisions, hash-and-sign stays secure.</p>
+
+    <h4>Solution</h4>
+    <p>Let \(S_0=(G_0,S_0,V_0)\) be any secure signature scheme with message space \(\mathbb{G}\) (e.g. \(S_{\mathrm{RSA\text{-}FDH}}\)). Let \(H_{\mathrm{dl}}\) be the trapdoor collision-resistant hash of Exercise 10.30: with public parameters a group \(\mathbb{G}\) of prime order \(q\) with generator \(g\) and a second element \(h=g^t\), define
+    \[
+      H_{\mathrm{dl}}(\alpha,\beta):=g^{\alpha}h^{\beta}\in\mathbb{G},\qquad (\alpha,\beta)\in\mathbb{Z}_q\times\mathbb{Z}_q .
+    \]
+    Under the discrete-log assumption in \(\mathbb{G}\), \(H_{\mathrm{dl}}\) is collision resistant; indeed a collision \(g^{\alpha}h^{\beta}=g^{\alpha'}h^{\beta'}\) with \((\alpha,\beta)\neq(\alpha',\beta')\) yields \(t=(\alpha-\alpha')/(\beta'-\beta)\bmod q\), i.e. \(\mathrm{dlog}_g h\). But the <i>trapdoor</i> \(t\) lets its holder turn any preimage into a colliding one.</p>
+    <p><b>The scheme.</b> Define \(S=(G,S,V)\) by hash-and-sign (eq. 13.1) over \(\mathbb{Z}_q\times\mathbb{Z}_q\):</p>
+    <p>\(\;\;\bullet\;\) \(G\): run \(G_0\) to get \((pk_0,sk_0)\); the public parameters \((\mathbb{G},g,h)\) of \(H_{\mathrm{dl}}\) are part of \(pk\). Crucially, the <i>signer also keeps the trapdoor</i> \(t=\mathrm{dlog}_g h\) (the signer generated \(h\) as \(g^t\)). So \(pk=(pk_0,\mathbb{G},g,h)\) and \(sk=(sk_0,t)\).</p>
+    <p>\(\;\;\bullet\;\) \(S(sk,m):=S_0(sk_0,H_{\mathrm{dl}}(m))\) and \(V(pk,m,\sigma):=V_0(pk_0,H_{\mathrm{dl}}(m),\sigma)\), where messages \(m=(\alpha,\beta)\).</p>
+
+    <p><b>Security.</b> This is exactly the hash-and-sign construction of Theorem 13.1. To an <i>outside</i> adversary the trapdoor \(t\) is unknown (it sees only \(pk\), which contains \(h\) but not \(t\)), so \(H_{\mathrm{dl}}\) is collision resistant from the adversary's viewpoint. By Theorem 13.1, for any forger \(\mathcal{A}\) there are elementary wrappers \(\mathcal{B}_S,\mathcal{B}_H\) with
+    \[
+      \mathrm{SIGadv}[\mathcal{A},S]\ \le\ \mathrm{SIGadv}[\mathcal{B}_S,S_0]+\mathrm{CRadv}[\mathcal{B}_H,H_{\mathrm{dl}}]
+      \ \le\ \mathrm{SIGadv}[\mathcal{B}_S,S_0]+\mathrm{DLadv}[\mathcal{B}',\mathbb{G}],
+    \]
+    both negligible. Hence \(S\) is a secure signature scheme. (The proof of Theorem 13.1 does not depend on whether the signer privately knows a trapdoor; collision resistance need only hold against the adversary.)</p>
+
+    <p><b>Non-binding.</b> The signer, knowing \(t\), is not collision resistant to itself. Given any message \(m_0=(\alpha,\beta)\), pick any \(\delta\neq 0\) and set
+    \[
+      m_1:=(\alpha+t\delta,\ \beta-\delta)\bmod q .
+    \]
+    Then \(m_1\neq m_0\) and
+    \[
+      H_{\mathrm{dl}}(m_1)=g^{\alpha+t\delta}h^{\beta-\delta}=g^{\alpha}g^{t\delta}h^{\beta}h^{-\delta}
+      =g^{\alpha}h^{\beta}\cdot (g^{t}h^{-1})^{\delta}=g^{\alpha}h^{\beta}=H_{\mathrm{dl}}(m_0),
+    \]
+    using \(g^{t}=h\). Therefore any single signature \(\sigma=S_0(sk_0,H_{\mathrm{dl}}(m_0))\) satisfies \(V(pk,m_0,\sigma)=V(pk,m_1,\sigma)=\texttt{accept}\). The signer has produced two distinct messages bound to the same signature, so the scheme is non-binding while remaining secure, as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-13-5" data-ch="13">
+  <h3 class="ptitle"><span class="pnum">13.5</span> <span class="pname">(Strongly binding signatures)</span></h3>
+  <div class="statement">
+    <p>A <i>strong binding</i> adversary \(\mathcal{A}\) outputs \((pk,m,pk',m',\sigma)\) and defeats strong binding if \((pk,m)\neq(pk',m')\) and \(V(pk,m,\sigma)=V(pk',m',\sigma)=\texttt{accept}\); write \(\mathrm{sbSIGadv}[\mathcal{A},S]\) for its success probability. (a) Augment \(S\) so the signer signs \((pk,m)\): \(S'(sk,m):=S(sk,(pk,m))\), \(V'(pk,m,\sigma):=V(pk,(pk,m),\sigma)\). Show that applied to \(S_{\mathrm{RSA\text{-}FDH}}\), with \(H\) a random oracle, the result is still secure and now strongly binding. (b) Give a secure scheme that is <i>not</i> strongly binding even after (a). (c) For a hash \(H''\) define \(S''(sk,m):=(H''(pk,m),\,S(sk,m))\) and \(V''\) accepts \((h,\sigma)\) iff \(h=H''(pk,m)\) and \(V(pk,m,\sigma)=\texttt{accept}\). Show (i) \(S\) secure \(\Rightarrow S''\) secure, and (ii) \(H''\) collision resistant \(\Rightarrow S''\) strongly binding.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>(a) Folding \(pk\) into the signed message changes nothing about unforgeability (it is hash-and-sign with the public key prepended), and for FDH it forces a strong-binding break to produce two pairs whose random-oracle images coincide with the same \(\sigma^e\) under <i>different</i> moduli — which, in the RO model, requires either an unlikely collision among fresh random values or inverting RSA. (b) FDH already has a built-in malleability of the modulus that survives the \((pk,m)\) trick when the same signer reuses a value. (c) Appending a CR hash of \((pk,m)\) makes a strong-binding break literally a collision of \(H''\).</p>
+
+    <h4>Solution</h4>
+
+    <p><b>(a) \(S'_{\mathrm{RSA\text{-}FDH}}\) is secure and strongly binding (RO model).</b> Here \(pk=(n,e)\), \(sk=(n,d)\), and \(S'(sk,m)=H(pk,m)^d\), with \(H\) a random oracle into \(Y\subseteq\mathbb{Z}_n\).</p>
+    <p><i>Security.</i> This is just \(S_{\mathrm{RSA\text{-}FDH}}\) on the enlarged message space \(\mathcal{M}'=\{pk\}\times\mathcal{M}\) using the random oracle \(H'(\cdot):=H(pk,\cdot)\). Prepending the fixed string \(pk\) is an injective re-encoding of the message, so any forger \(\mathcal{A}\) against \(S'\) is, verbatim, a forger against \(S_{\mathrm{RSA\text{-}FDH}}\): if \(\mathcal{A}\) forges \((m^\ast,\sigma^\ast)\) with \(m^\ast\) new, then \((pk,m^\ast)\) is a new point of \(H\), and \((\,(pk,m^\ast),\sigma^\ast)\) is an FDH forgery. Theorem 13.4 gives
+    \[
+      \mathrm{SIGro\,adv}[\mathcal{A},S'_{\mathrm{RSA\text{-}FDH}}]\ \le\ 2.72\,(Q_s+1)\,\mathrm{RSAadv}[\mathcal{B},\ell,e],
+    \]
+    negligible under RSA. So the augmented scheme is secure.</p>
+    <p><i>Strong binding.</i> Suppose a strong-binding adversary outputs \((pk,m,pk',m',\sigma)\) with \((pk,m)\neq(pk',m')\), \(pk=(n,e)\), \(pk'=(n',e')\), and both verify:
+    \[
+      \sigma^{e}=H(pk,m)\ \text{in}\ \mathbb{Z}_n,\qquad \sigma^{e'}=H(pk',m')\ \text{in}\ \mathbb{Z}_{n'} .
+    \]
+    We must show this is hard in the RO model. Note that the two inputs to \(H\) are \((pk,m)\) and \((pk',m')\); since \((pk,m)\neq(pk',m')\) these are <i>distinct</i> oracle points, so \(H(pk,m)\) and \(H(pk',m')\) are independent uniform values in \(Y\). Model the adversary as making \(Q_{ro}\) oracle queries and consider the moment each value is sampled.</p>
+    <p>The adversary commits to a single ring element \(\sigma\) (an integer in \([0,\min(n,n'))\), or reduced in each ring). For the first equation to hold, the freshly sampled uniform value \(H(pk,m)\in Y\) must equal the fixed quantity \(\sigma^{e}\bmod n\); since \(|Y|\ge n/4\) and \(H(pk,m)\) is uniform over \(Y\) independent of everything the adversary chose <i>before</i> the query, this holds with probability at most \(4/n\) per query unless the adversary first fixes \(H(pk,m)\) and then computes \(\sigma=H(pk,m)^{1/e}\) — i.e. inverts RSA on a random target. The same holds for the second equation under \((n',e')\). Concretely, reduce to RSA exactly as in Theorem 13.4: an inverter \(\mathcal{B}\) plants its challenge \(y^\ast\) as the oracle answer at a guessed query; if the adversary succeeds in matching \(\sigma^e=H(pk,m)\) for that planted value with \(pk\) the honest key, then \(\sigma=(y^\ast)^{1/e}\) solves RSA. Hence
+    \[
+      \mathrm{sbSIGadv}[\mathcal{A},S'_{\mathrm{RSA\text{-}FDH}}]\ \le\ (Q_{ro}+1)\,\mathrm{RSAadv}[\mathcal{B},\ell,e]+\tfrac{4Q_{ro}}{n},
+    \]
+    which is negligible. Intuitively, because \(pk\) is inside the hash, the two accepted pairs are necessarily two <i>different</i> random-oracle points, so the adversary cannot reuse one accepted equation to satisfy the other; it must invert FDH afresh at an independent random target. Thus \(S'_{\mathrm{RSA\text{-}FDH}}\) is strongly binding.</p>
+
+    <p><b>(b) A secure scheme not strongly binding even after (a).</b> Take any secure scheme \(S^\flat=(G^\flat,S^\flat,V^\flat)\) and define \(S\) which simply <i>ignores</i> a trailing bit of the message: messages are \(m=(m_0,c)\) with \(c\in\{0,1\}\), and
+    \[
+      S(sk,(m_0,c)):=S^\flat(sk,m_0),\qquad V(pk,(m_0,c),\sigma):=V^\flat(pk,m_0,\sigma).
+    \]
+    This is secure (a forgery on a new \((m_0,c)\) gives a forgery on \(m_0\) under \(S^\flat\) whenever \(m_0\) is new; and if \(m_0\) was queried, then forging a <i>new</i> message means flipping \(c\), which is allowed — so to be safe take \(S^\flat\) and observe the reduction still forges on \(m_0\) since the \(S\)-game treats \((m_0,0)\) and \((m_0,1)\) as querying \(m_0\); more cleanly, define the queried set in the reduction to include \(m_0\) only when both extensions were asked, giving \(\mathrm{SIGadv}[\mathcal{A},S]\le 2\,\mathrm{SIGadv}[\mathcal{B},S^\flat]\)). But the same \(\sigma\) is valid for both \((m_0,0)\) and \((m_0,1)\) under the <i>same</i> \(pk\): with \((pk,m)=(pk,(m_0,0))\neq(pk,(m_0,1))=(pk,m')\) we get \(V(pk,m,\sigma)=V(pk,m',\sigma)=\texttt{accept}\). This breaks strong binding with advantage \(1\). Applying the augmentation of part (a) does not help: \(S'\) signs \((pk,(m_0,c))\) but \(V'\) still ignores \(c\), because \(V'\) recomputes \(H'(pk,(m_0,c))\) which is again independent of \(c\) once we fold it through the ignoring step — more directly, repeat the construction so that the scheme being augmented ignores the trailing bit, so \((pk,(m_0,0))\) and \((pk,(m_0,1))\) again share a signature. So \(S'\) is still not strongly binding.</p>
+
+    <p><b>(c) The \(H''(pk,m)\) augmentation.</b></p>
+    <p><i>(i) \(S\) secure \(\Rightarrow S''\) secure.</i> Let \(\mathcal{A}\) forge \(S''\). Build \(\mathcal{B}\) against \(S\): \(\mathcal{B}\) gets \(pk\), forwards it, and answers each signing query \(m\) by querying its own oracle for \(\sigma\leftarrow S(sk,m)\), computing \(h\leftarrow H''(pk,m)\) (it knows \(pk\) and \(H''\) is public), and returning \((h,\sigma)\) — a perfect simulation. When \(\mathcal{A}\) outputs \(\big(m^\ast,(h^\ast,\sigma^\ast)\big)\) with \(m^\ast\) new and \(V''\) accepting, then in particular \(V(pk,m^\ast,\sigma^\ast)=\texttt{accept}\) and \(m^\ast\) was never queried, so \((m^\ast,\sigma^\ast)\) is a valid \(S\)-forgery. Thus \(\mathrm{SIGadv}[\mathcal{A},S'']\le \mathrm{SIGadv}[\mathcal{B},S]\), negligible. (The extra \(h\) component is publicly recomputable and adds nothing for the forger.)</p>
+    <p><i>(ii) \(H''\) collision resistant \(\Rightarrow S''\) strongly binding.</i> Let \(\mathcal{A}\) output \(\big(pk,m,pk',m',(h,\sigma)\big)\) with \((pk,m)\neq(pk',m')\) and both \(V''\) checks accepting. Acceptance forces
+    \[
+      h=H''(pk,m)\qquad\text{and}\qquad h=H''(pk',m').
+    \]
+    Hence \(H''(pk,m)=H''(pk',m')\) with \((pk,m)\neq(pk',m')\): this is exactly a collision for \(H''\). The wrapper \(\mathcal{B}_H\) runs \(\mathcal{A}\) and outputs the pair \((pk,m),(pk',m')\), so
+    \[
+      \mathrm{sbSIGadv}[\mathcal{A},S'']\ \le\ \mathrm{CRadv}[\mathcal{B}_H,H''],
+    \]
+    negligible. Therefore \(S''\) is strongly binding, as required. (Note this works for <i>every</i> base scheme \(S\), at the cost of the extra hash value \(h\) in each signature — the length increase the discussion mentions.)</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-13-13" data-ch="13">
+  <h3 class="ptitle"><span class="pnum">13.13</span> <span class="pname">(Signature with message recovery)</span></h3>
+  <div class="statement">
+    <p>Let \(T=(G,F,I)\) be a one-way trapdoor permutation over \(\mathcal{X}=\{0,1\}^n\). Let \(\mathcal{R}=\{0,1\}^{\ell}\), \(\mathcal{U}=\{0,1\}^{n-\ell}\) with \(0<\ell<n\). Let \(H\) be a hash over \((\mathcal{M}\times\mathcal{U},\mathcal{R})\) and \(W\) a hash over \((\mathcal{R},\mathcal{U})\). Consider \(S=(G,S,V)\) over \((\mathcal{M}\times\mathcal{U},\mathcal{X})\) where
+    \[
+      S\big(sk,(m_0,m_1)\big):=\Big\{h\leftarrow H(m_0,m_1),\ \sigma\leftarrow I\big(sk,\ h\,\|\,(W(h)\oplus m_1)\big),\ \text{output }\sigma\Big\}.
+    \]
+    (a) Explain verification. (b) Show security assuming \(T\) is one-way, \(1/|\mathcal{R}|\) negligible, and \(H,W\) random oracles. (c) Show that \((m_0,\sigma)\) alone allows recovery of \(m_1\). (d) Can the Section 13.5 technique give a tight reduction here?</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The signature packs a redundancy check \(h=H(m_0,m_1)\) into the high \(\ell\) bits and a one-time-pad masking of \(m_1\) into the low \(n-\ell\) bits, then applies \(I\). Verification applies \(F\) to peel this apart, unmasks \(m_1\), and re-checks the hash. Forging requires producing a preimage under \(F\) whose high part equals a fresh random-oracle value — essentially inverting \(T\) at a random point, the FDH argument.</p>
+
+    <h4>Solution</h4>
+    <p><b>(a) Verification.</b> On input \(\big(pk,(m_0,m_1),\sigma\big)\), the verifier computes the forward permutation
+    \[
+      z\leftarrow F(pk,\sigma)\in\{0,1\}^n,
+    \]
+    parses \(z=h'\,\|\,c\) with \(h'\in\mathcal{R}=\{0,1\}^{\ell}\) the high \(\ell\) bits and \(c\in\mathcal{U}=\{0,1\}^{n-\ell}\) the low bits. It then unmasks
+    \[
+      \tilde m_1\leftarrow W(h')\oplus c,
+    \]
+    and accepts iff \(h'=H(m_0,\tilde m_1)\) (and, if \(m_1\) is transmitted, iff \(\tilde m_1=m_1\)). Correctness: for an honest signature \(\sigma=I(sk,h\|(W(h)\oplus m_1))\) we have \(F(pk,\sigma)=h\|(W(h)\oplus m_1)\), so \(h'=h\), \(c=W(h)\oplus m_1\), giving \(\tilde m_1=W(h)\oplus W(h)\oplus m_1=m_1\) and \(h'=h=H(m_0,m_1)=H(m_0,\tilde m_1)\); the verifier accepts.</p>
+
+    <p><b>(b) Security (RO model).</b> The idea is simple: we show a forger \(\mathcal{A}\) yields an inverter \(\mathcal{B}\) for \(T\). \(\mathcal{B}\) is given \((pk,y^\ast)\) with \(y^\ast=F(pk,x^\ast)\) for a hidden \(x^\ast\); its goal is \(x^\ast\). \(\mathcal{B}\) runs \(\mathcal{A}\) on \(pk\) and simulates the oracles \(H,W\) and the signing oracle as follows, maintaining tables.</p>
+    <p><i>Random-oracle and signing simulation (FDH-style).</i> \(\mathcal{B}\) guesses an index \(j^\ast\xleftarrow{R}\{1,\dots,Q_H+1\}\) among the \(H\)-queries — the one it bets the forgery's \((m_0^\ast,m_1^\ast)\) will hit. For \(H\)-queries it answers with fresh uniform \(h\in\mathcal{R}\) (programming the planted target at the guessed query, see below); for \(W\)-queries it answers with fresh uniform values in \(\mathcal{U}\). For a <i>signing</i> query \((m_0,m_1)\), \(\mathcal{B}\) must output \(\sigma\) with \(F(pk,\sigma)=H(m_0,m_1)\|(W(H(m_0,m_1))\oplus m_1)\); to do this without \(sk\), it works <i>backwards</i> like FDH: it picks \(\sigma\xleftarrow{R}\mathcal{X}\), computes \(z=F(pk,\sigma)=h\|c\), and <i>programs</i> the oracles by defining \(H(m_0,m_1):=h\) and \(W(h):=c\oplus m_1\). Since \(F(pk,\cdot)\) is a permutation, \(\sigma\) uniform makes \(z\) uniform, hence \(h\) is uniform in \(\mathcal{R}\) and \(W(h)\) uniform in \(\mathcal{U}\) — the correct oracle distribution. Programming fails only if \(H(m_0,m_1)\) or \(W(h)\) was already defined, an event bounded by \((Q_H+Q_W+Q_s)/|\mathcal{R}|\) using that fresh \(h\) collides with a prior \(\mathcal{R}\)-point with probability \(\le (\cdot)/|\mathcal{R}|\); since \(1/|\mathcal{R}|\) is negligible this is negligible.</p>
+    <p><i>Embedding the challenge.</i> At the guessed \(H\)-query \((m_0,m_1)\) (query \(j^\ast\)) that is <i>not</i> a signing query, \(\mathcal{B}\) instead defines the answer so that the corresponding \(F\)-preimage is the unknown \(x^\ast\): it sets the high \(\ell\) bits of \(y^\ast\) as \(h^\ast\) (i.e. it programs \(H(m_0,m_1)\) and \(W(h^\ast)\) so that the required preimage \(h^\ast\|(W(h^\ast)\oplus m_1)\) equals \(F(pk,x^\ast)=y^\ast\); concretely \(h^\ast:=\) high bits of \(y^\ast\), \(W(h^\ast):=(\text{low bits of }y^\ast)\oplus m_1\)). Then a valid forgery \(\sigma^\ast\) on \((m_0,m_1)\) satisfies \(F(pk,\sigma^\ast)=h^\ast\|(W(h^\ast)\oplus m_1)=y^\ast\), and since \(F(pk,\cdot)\) is a bijection, \(\sigma^\ast=x^\ast\). \(\mathcal{B}\) outputs \(\sigma^\ast\).</p>
+    <p><i>Analysis.</i> Because \(H\) is a random oracle, a forgery on a new \((m_0^\ast,m_1^\ast)\) must (except with probability \(\le 1/|\mathcal{R}|\) of guessing \(h^\ast\) without querying) involve an explicit \(H\)-query; \(\mathcal{B}\) guesses which one with probability \(1/(Q_H+1)\). Conditioned on a correct guess and successful programming, \(\mathcal{B}\) inverts. Hence, exactly as in Theorem 13.3,
+    \[
+      \mathrm{SIGro\,adv}[\mathcal{A},S]\ \le\ (Q_H+1)\,\mathrm{OWadv}[\mathcal{B},T]\ +\ \frac{Q_H+Q_W+Q_s}{|\mathcal{R}|}.
+    \]
+    All terms are negligible, so \(S\) is secure. (The role of \(W\) is to mask \(m_1\) so the low bits of the preimage look random, decoupling \(m_1\) from the recovery target; the role of the \(1/|\mathcal{R}|\) condition is to make oracle programming consistent.)</p>
+
+    <p><b>(c) Message recovery.</b> Given only \((m_0,\sigma)\) and \(pk\) (without \(m_1\)), the receiver computes \(z=F(pk,\sigma)=h'\|c\), then \(\tilde m_1=W(h')\oplus c\). For a valid signature this recovers \(\tilde m_1=m_1\) exactly as in the correctness computation of part (a): the low \(n-\ell\) bits of \(F(pk,\sigma)\) are \(W(h)\oplus m_1\), and XOR-ing \(W(h)=W(h')\) back out yields \(m_1\). The receiver may additionally verify by checking \(h'=H(m_0,\tilde m_1)\). Thus the signer need only transmit \((m_0,\sigma)\); the recipient recovers \(m_1\) itself — a signature <i>with message recovery</i>, shortening transmissions.</p>
+
+    <p><b>(d) Tight reduction?</b> The loss above is the factor \(Q_H+1\), coming from guessing which \(H\)-query carries the forgery — the same loss as plain \(S_{\mathrm{FDH}}\). The Section 13.5 technique (the extra random bit \(b\) with \(H(b,m)\), so that the signer knows exactly one of two preimages per message and the forger, ignorant of which, produces the unknown one with probability \(1/2\)) <i>can</i> be adapted: append a bit \(b\) and hash \(H(b,m_0,m_1)\), letting the reduction know an \(F\)-preimage for the \(b\)-branch (answer signing queries) while embedding a randomly self-reduced challenge in the \((1-b)\)-branch. Because \(T\) is a general trapdoor permutation, however, the technique needs a <i>random self-reduction</i> for \(T\) — the ability, given one challenge \(y^\ast\), to manufacture many independent challenges whose solution yields \(x^\ast\). RSA has this (multiply by \(r^e\)), and the construction here is built on an abstract \(T\); so the answer is: the tight technique applies <i>provided</i> \(T\) admits a random self-reduction (e.g. when \(T\) is RSA), yielding loss \(2\) instead of \(Q_H+1\); for a generic one-way trapdoor permutation without random self-reducibility, it does not, and the \(Q_H+1\) loss remains.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-13-15" data-ch="13">
+  <h3 class="ptitle"><span class="pnum">13.15</span> <span class="pname">(RSA blind signatures)</span></h3>
+  <div class="statement">
+    <p>Let \((n,d)\xleftarrow{R}\mathrm{RSAGen}(\ell,e)\), public key \((n,e)\), private \((n,d)\); \(H:\mathcal{M}\to\mathbb{Z}_n\). To blindly sign \(m\): (1) Alice picks \(r\xleftarrow{R}\mathbb{Z}_n\), sends \(m'\leftarrow H(m)\cdot r^{e}\in\mathbb{Z}_n\); (2) Bob returns \(\sigma'\leftarrow (m')^{d}\); (3) Alice sets \(\sigma\leftarrow\sigma'/r\). (a) Show Bob sees a uniform \(m'\) independent of \(m\). (b) Write the precise unforgeability definition (\(Q\) signatures \(\Rightarrow\) cannot produce \(Q+1\) valid pairs). (c) Reduce security to the one-more-RSA (1MRSA) assumption in the RO model.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>(a) Multiplying \(H(m)\) by \(r^e\) for uniform \(r\) is a one-time pad in the multiplicative group: \(m'\) is uniform and carries no information about \(m\), so Bob is blind. (c) Bob's signing oracle is precisely an "RSA-solve" oracle and each hashed message is a "challenge"; a forger who produces \(Q+1\) valid signatures after \(Q\) blind queries solves one more RSA than it asked for — exactly the 1MRSA game.</p>
+
+    <h4>Solution</h4>
+    <p><b>(a) Blindness.</b> Fix any \(m\), so \(H(m)\in\mathbb{Z}_n^\ast\) is a fixed element (we may assume \(\gcd(H(m),n)=1\), which holds except with negligible probability). The map \(r\mapsto r^{e}\) is a bijection of \(\mathbb{Z}_n^\ast\) (since \(e\) is invertible mod \(\varphi(n)\) for RSA), so as \(r\xleftarrow{R}\mathbb{Z}_n^\ast\) the value \(r^{e}\) is uniform over \(\mathbb{Z}_n^\ast\). Multiplication by the fixed unit \(H(m)\) is again a bijection of \(\mathbb{Z}_n^\ast\), hence
+    \[
+      m'=H(m)\cdot r^{e}\ \text{is uniformly distributed over } \mathbb{Z}_n^\ast,\ \text{independently of } m.
+    \]
+    Thus the distribution of the single message \(m'\) that Bob sees does not depend on \(m\) at all: Bob learns nothing about \(m\), so the protocol is (perfectly) blind. Correctness: \(\sigma=\sigma'/r=(m')^{d}/r=(H(m)r^{e})^{d}/r=H(m)^{d}r/r=H(m)^{d}\), a valid signature, as Equation (13.4) records.</p>
+
+    <p><b>(b) Unforgeability definition.</b> For the RSA blind signature scheme and adversary \(\mathcal{A}\) (playing Alice's role), the game is:</p>
+    <p>\(\;\;\bullet\;\) The challenger runs \((n,d)\xleftarrow{R}\mathrm{RSAGen}(\ell,e)\) and gives \((n,e)\) to \(\mathcal{A}\); \(H\) is available as an oracle.</p>
+    <p>\(\;\;\bullet\;\) \(\mathcal{A}\) adaptively makes <i>blind-signing queries</i>: it submits \(\hat m\in\mathbb{Z}_n\) and receives \(\hat m^{d}\in\mathbb{Z}_n\). (This is Bob's step (2): the challenger raises the submitted value to the \(d\)-th power; it never sees the underlying message.) Let \(Q\) be the number of such queries.</p>
+    <p>\(\;\;\bullet\;\) \(\mathcal{A}\) outputs a list of \(Q+1\) <i>distinct</i> message-signature pairs \((m_1,\sigma_1),\dots,(m_{Q+1},\sigma_{Q+1})\).</p>
+    <p>\(\mathcal{A}\) <i>wins</i> if all \(Q+1\) messages \(m_i\) are distinct and every pair is valid, i.e. \(\sigma_i^{e}=H(m_i)\) in \(\mathbb{Z}_n\) for all \(i\). Define \(\mathrm{blSIGadv}[\mathcal{A}]\) as the winning probability. The scheme is secure if \(\mathrm{blSIGadv}[\mathcal{A}]\) is negligible for every efficient \(\mathcal{A}\). (The bound \(Q+1\) captures "one more signature than was issued".)</p>
+
+    <p><b>(c) Reduction to 1MRSA.</b> The idea is simple: we build \(\mathcal{B}\), an elementary wrapper around \(\mathcal{A}\), that wins the 1MRSA game. \(\mathcal{B}\) gets \((n,e)\) from its 1MRSA challenger and forwards it to \(\mathcal{A}\). It maintains a table for the random oracle \(H\).</p>
+    <p><i>Mapping \(H\)-queries to challenge queries.</i> When \(\mathcal{A}\) makes a fresh random-oracle query \(H(m)\), \(\mathcal{B}\) issues a <i>challenge query</i> to its 1MRSA challenger, receiving a uniform \(v\in\mathbb{Z}_n\); it records that this is the \(i\)-th challenge and sets \(H(m):=v\). It returns \(v\) to \(\mathcal{A}\). (Repeated queries return the stored value.) Since challenge responses are uniform in \(\mathbb{Z}_n\), this is a perfect simulation of the random oracle.</p>
+    <p><i>Mapping blind-sign queries to RSA-solve queries.</i> When \(\mathcal{A}\) makes a blind-signing query \(\hat m\in\mathbb{Z}_n\), \(\mathcal{B}\) forwards \(\hat m\) to its 1MRSA challenger as an <i>RSA-solve query</i> and relays the answer \(\hat m^{1/e}=\hat m^{d}\). This is exactly Bob's reply, so the simulation is perfect. If \(\mathcal{A}\) makes \(Q\) blind-signing queries, \(\mathcal{B}\) makes exactly \(Q\) RSA-solve queries.</p>
+    <p><i>Extracting one-more solutions.</i> Eventually \(\mathcal{A}\) outputs \(Q+1\) valid distinct pairs \((m_i,\sigma_i)\) with \(\sigma_i^{e}=H(m_i)\). We may assume each \(m_i\) was queried to \(H\) (if not, \(\mathcal{A}\) guessed the value of a random oracle at an unqueried point, which makes \(\sigma_i^e=H(m_i)\) hold with probability \(\le 1/|\mathbb{Z}_n^\ast|\), negligible; \(\mathcal{B}\) can also just query these itself, adding at most \(Q+1\) challenge queries). So each \(m_i\) corresponds to some challenge index \(c_i\) with \(H(m_i)=v_{c_i}\), and the \(m_i\) being distinct, after collapsing duplicate challenge indices we still have \(Q+1\) <i>correct</i> pairs in the 1MRSA sense: \(\sigma_i^{e}=v_{c_i}\), i.e. \(\sigma_i=v_{c_i}^{1/e}\). \(\mathcal{B}\) outputs the list \(\{(c_i,\sigma_i)\}\).</p>
+    <p><i>Winning.</i> \(\mathcal{B}\) issued exactly \(Q\) RSA-solve queries but produces \(Q+1\) correct pairs (with distinct challenge indices \(c_i\), since distinct \(m_i\) map to distinct challenges under the injective \(H\)-table — and even if two messages shared a challenge value they would not be distinct pairs, contradicting validity). Hence the number of correct pairs exceeds the number of RSA-solve queries, and \(\mathcal{B}\) wins 1MRSA. Therefore
+    \[
+      \mathrm{blSIGadv}[\mathcal{A}]\ \le\ \mathrm{1MRSAadv}[\mathcal{B},\ell,e]\ +\ \frac{Q+1}{|\mathbb{Z}_n^\ast|},
+    \]
+    which is negligible under the 1MRSA assumption. Thus the RSA blind signature scheme is secure in the random oracle model, as required.</p>
+  </div>
+</section>

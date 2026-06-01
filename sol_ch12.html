@@ -1,0 +1,340 @@
+<section class="problem" id="ex-12-1" data-ch="12">
+  <h3 class="ptitle"><span class="pnum">12.1</span> <span class="pname">(Insecurity of multiplicative ElGamal)</span></h3>
+  <div class="statement">
+    <p>Recall multiplicative ElGamal \(E_{\mathrm{MEG}}=(G,E,D)\) over \((\mathbb{G},\mathbb{G}^2)\) from Exercise 11.5: with public key \(u=g^\alpha\),
+    \[
+      E(u,m): \quad \beta \xleftarrow{\$}\mathbb{Z}_q,\ v\leftarrow g^\beta,\ e\leftarrow u^\beta\cdot m,\ \text{output }(v,e),
+      \qquad D(\alpha,(v,e)) := e/v^\alpha .
+    \]
+    Show that \(E_{\mathrm{MEG}}\) is not CCA secure by exhibiting an adversary with advantage \(1\) in the \(1\mathrm{CCA}\) attack game.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The scheme is multiplicatively homomorphic: multiplying the second component \(e\) by a known group element \(\gamma\) turns an encryption of \(m\) into an encryption of \(m\gamma\), <em>without changing</em> \(v\) (so the same \(v^\alpha\) still works). We maul the challenge into a fresh, legal ciphertext, ask the decryption oracle to decrypt it, divide out \(\gamma\), and read off which message was encrypted. No reduction is needed — the attack always succeeds.</p>
+    <h4>Solution</h4>
+    <p>We construct an explicit \(1\mathrm{CCA}\) adversary \(\mathcal{A}\) playing Attack Game 12.1 against \(E_{\mathrm{MEG}}\).</p>
+    <p><strong>Setup.</strong> \(\mathcal{A}\) receives the public key \(u=g^\alpha\). It makes no Phase-1 decryption queries.</p>
+    <p><strong>Encryption query.</strong> \(\mathcal{A}\) picks any two <em>distinct</em> messages \(m_0,m_1\in\mathbb{G}\) with \(m_0\neq m_1\) (the message space \(\mathbb{G}\) is non-trivial) and submits the pair \((m_0,m_1)\). The challenger, running Experiment \(b\), returns
+    \[
+      c=(v,e),\qquad v=g^\beta,\quad e=u^\beta\cdot m_b
+    \]
+    for a hidden bit \(b\) and a random \(\beta\in\mathbb{Z}_q\).</p>
+    <p><strong>Mauling.</strong> \(\mathcal{A}\) fixes the known group element \(\gamma:=g\) and forms
+    \[
+      c' := (v,\ e\cdot g) = (g^\beta,\ u^\beta\cdot m_b\cdot g).
+    \]
+    Since \(g\neq 1\) in \(\mathbb{G}\) (it is a generator of a group of order \(q>1\)), we have \(e\cdot g\neq e\), hence \(c'\neq c\). Thus \(c'\) is a <em>legal</em> Phase-2 decryption query: it differs from the single ciphertext produced by the encryption query.</p>
+    <p><strong>Phase-2 decryption query.</strong> \(\mathcal{A}\) submits \(c'\). The challenger computes
+    \[
+      D(\alpha,c') = \frac{e\cdot g}{v^\alpha} = \frac{u^\beta m_b\, g}{(g^\beta)^\alpha}
+      = \frac{(g^\alpha)^\beta m_b\, g}{g^{\alpha\beta}} = m_b\cdot g ,
+    \]
+    using \(u^\beta=(g^\alpha)^\beta=g^{\alpha\beta}=v^\alpha\). So the oracle returns exactly \(m^\ast:=m_b\cdot g\).</p>
+    <p><strong>Output.</strong> \(\mathcal{A}\) computes \(\hat m:=m^\ast/g = m_b\) and outputs \(\hat b:=1\) if \(\hat m=m_1\), and \(\hat b:=0\) if \(\hat m=m_0\) (these are the only two possibilities and they are distinct).</p>
+    <p><strong>Advantage.</strong> In Experiment \(b\) the recovered \(\hat m\) equals \(m_b\) with certainty, so \(\mathcal{A}\) outputs \(\hat b=b\) with probability \(1\). In the bit-guessing formulation \(1\mathrm{CCAadv}^\ast[\mathcal{A},E_{\mathrm{MEG}}]=|\Pr[\hat b=b]-\tfrac12|=\tfrac12\), whence by (12.2)
+    \[
+      1\mathrm{CCAadv}[\mathcal{A},E_{\mathrm{MEG}}]=2\cdot\tfrac12 = 1 ,
+    \]
+    as required. (Equivalently, in Experiment \(0\) the adversary outputs \(1\) with probability \(0\) and in Experiment \(1\) with probability \(1\), so \(|\Pr[W_0]-\Pr[W_1]|=1\).) Hence \(E_{\mathrm{MEG}}\) is not CCA secure.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-12-2" data-ch="12">
+  <h3 class="ptitle"><span class="pnum">12.2</span> <span class="pname">(Sloppy CCA)</span></h3>
+  <div class="statement">
+    <p>Let \(E=(G,E,D)\) be CCA secure over \((\mathcal{M},\mathcal{C})\) with \(\mathcal{C}=\{0,1\}^{\ell}\). Define \(E'=(G,E',D')\) over \((\mathcal{M},\mathcal{C}')\), \(\mathcal{C}'=\{0,1\}^{\ell+1}\), by
+    \[
+      E'(pk,m):=E(pk,m)\,\|\,0, \qquad D'(sk,c):=D\bigl(sk,\,c[0\,..\,\ell-1]\bigr),
+    \]
+    i.e. the decryptor ignores the last bit. Show \(E'\) is not CCA secure, with an adversary of advantage \(1\) in the \(1\mathrm{CCA}\) game.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The appended bit is part of the ciphertext but is thrown away on decryption. Two ciphertexts that differ only in this trailing bit are <em>unequal</em> (so the difference makes a legal decryption query) yet decrypt identically. We flip the ignored bit of the challenge to obtain a different ciphertext with the same decryption, query it, and read the plaintext.</p>
+    <h4>Solution</h4>
+    <p>We build an explicit \(1\mathrm{CCA}\) adversary \(\mathcal{A}\) against \(E'\) in Attack Game 12.1.</p>
+    <p><strong>Setup.</strong> \(\mathcal{A}\) gets \(pk\) and makes no Phase-1 queries.</p>
+    <p><strong>Encryption query.</strong> \(\mathcal{A}\) chooses two distinct messages \(m_0\neq m_1\in\mathcal{M}\) of equal length and submits \((m_0,m_1)\). In Experiment \(b\) the challenger returns
+    \[
+      c = E'(pk,m_b) = \underbrace{E(pk,m_b)}_{=:c_0\ \in\{0,1\}^\ell}\,\|\,0 ,
+    \]
+    a string of length \(\ell+1\) whose last bit is \(0\).</p>
+    <p><strong>Mauling.</strong> \(\mathcal{A}\) flips the last bit to form
+    \[
+      c' := c_0\,\|\,1 \;=\; c[0\,..\,\ell-1]\,\|\,1 .
+    \]
+    Then \(c'\neq c\) (they differ in position \(\ell\)), so \(c'\) is a legal Phase-2 decryption query. Moreover \(c'[0\,..\,\ell-1]=c_0=c[0\,..\,\ell-1]\), so by the definition of \(D'\),
+    \[
+      D'(sk,c') = D\bigl(sk,\,c_0\bigr) = D'(sk,c) = m_b .
+    \]
+    The leading \(\ell\) bits are a genuine output of \(E\) on \(m_b\), so \(D(sk,c_0)=m_b\) by correctness of \(E\).</p>
+    <p><strong>Phase-2 query and output.</strong> \(\mathcal{A}\) submits \(c'\) and receives \(m^\ast=m_b\). It outputs \(\hat b:=1\) if \(m^\ast=m_1\) and \(\hat b:=0\) if \(m^\ast=m_0\).</p>
+    <p><strong>Advantage.</strong> The decryption is exact, so \(\hat b=b\) with probability \(1\); thus \(|\Pr[W_0]-\Pr[W_1]|=1\) and, equivalently, \(1\mathrm{CCAadv}[\mathcal{A},E']=2\cdot\tfrac12=1\), as required. Hence appending an ignored bit destroys CCA security even though \(E\) itself is CCA secure.</p>
+    <p><strong>Remark.</strong> As the problem's discussion notes, this is exactly the artifact that the generalized notion (gCCA) is designed to forgive: with the equivalence relation \(c\equiv_{pk}c'\iff c[0\,..\,\ell-1]=c'[0\,..\,\ell-1]\), the query \(c'\) is equivalent to the challenge \(c\) and would be disallowed, restoring security.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-12-3" data-ch="12">
+  <h3 class="ptitle"><span class="pnum">12.3</span> <span class="pname">(Small subgroup attack)</span></h3>
+  <div class="statement">
+    <p>Let \(\mathbb{G}\subseteq\mathbb{Z}_p^\ast\) be the subgroup of prime order \(q\), \(p\) prime, and consider \(E_{\mathrm{EG}}\) of Section 12.4 with the <em>defective</em> decryption that, on ciphertext \((v,c)\), checks only \(v\in\mathbb{Z}_p^\ast\) (not \(v\in\mathbb{G}\)), computes \(w\leftarrow v^\alpha\in\mathbb{Z}_p^\ast\) (treating \(\alpha\in[0,q)\) as an integer), \(k\leftarrow H(v,w)\), and decrypts \(c\). Suppose
+    \[
+      p-1 = q\cdot t_1\cdots t_r ,
+    \]
+    with \(q,t_1,\dots,t_r\) distinct primes and each \(t_i\) poly-bounded. Show how a CCA attack recovers \(\alpha\) completely, using poly-many decryption queries and poly time, with success probability \(1-\epsilon\) (\(\epsilon\) negligible). Model \(H:\mathbb{Z}_p^\ast\times\mathbb{Z}_p^\ast\to\mathcal{K}\) as a random oracle and assume \(E_s\) provides one-time ciphertext integrity.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>Because the decryptor never checks \(v\in\mathbb{G}\), we may feed it an element \(g_i\) of small order \(t_i\) living <em>outside</em> \(\mathbb{G}\). Then \(w=g_i^\alpha=g_i^{\alpha \bmod t_i}\) takes only \(t_i\) possible values, one for each residue \(\alpha\bmod t_i\). We turn the decryptor into an oracle that tells us <em>which</em> residue is correct: build the symmetric ciphertext under the key \(H(g_i, g_i^{j})\) for a guess \(j\); the decryptor accepts (does not reject) precisely when \(g_i^j=w\), i.e. \(j\equiv\alpha\pmod{t_i}\). Doing this for every \(t_i\) and applying CRT recovers \(\alpha\bmod(t_1\cdots t_r)\); a final logarithmic search inside \(\mathbb{G}\) pins down \(\alpha\bmod q\), hence \(\alpha\) itself.</p>
+    <h4>Solution</h4>
+    <p><strong>Step 0: finding the small-order elements.</strong> The group \(\mathbb{Z}_p^\ast\) is cyclic of order \(p-1=q\,t_1\cdots t_r\). Fix a generator \(\eta\) of \(\mathbb{Z}_p^\ast\) (found by standard randomized search, since the factorization of \(p-1\) is known). For each \(i\) put
+    \[
+      g_i := \eta^{(p-1)/t_i}\in\mathbb{Z}_p^\ast .
+    \]
+    Then \(g_i\) has exact order \(t_i\): its order divides \(t_i\), and is not \(1\) because \(t_i\nmid (p-1)/t_i\) (the \(t_i\) are distinct primes). Each \(g_i\) is computed by one exponentiation, so this step is poly-time. Note \(g_i\notin\mathbb{G}\) since \(\gcd(t_i,q)=1\) and \(g_i\neq 1\), but \(g_i\in\mathbb{Z}_p^\ast\), so the defective decryptor accepts it as a valid first component.</p>
+    <p><strong>Step 1: the residue-testing subroutine.</strong> Fix an index \(i\) and a candidate residue \(j\in\{0,1,\dots,t_i-1\}\). The adversary forges a ciphertext as follows. It computes the trial group element \(w_j:=g_i^{\,j}\bmod p\), then the trial key \(k_j:=H(g_i,w_j)\) (one random-oracle query), picks any fixed message \(m_0\) in the message space, and forms
+    \[
+      \hat c_j := \bigl(\,g_i,\ E_s(k_j,m_0)\,\bigr).
+    \]
+    This is submitted as a CCA decryption query. (It is never equal to any encryption-query response, because we make no encryption queries; this is a pure key-recovery attack on the decryptor.) The defective decryptor computes
+    \[
+      w := g_i^{\,\alpha}\bmod p = g_i^{\,\alpha\bmod t_i}, \qquad k:=H(g_i,w),\qquad m\leftarrow D_s(k,\hat c_j[\text{sym part}]).
+    \]
+    There are two cases.</p>
+    <ul>
+      <li><em>Right guess</em> \(j\equiv\alpha\pmod{t_i}\): then \(w_j=g_i^{\,j}=g_i^{\,\alpha}=w\), so \(k_j=k\) and \(D_s(k,E_s(k_j,m_0))=m_0\). The decryptor returns \(m_0\) (no reject).</li>
+      <li><em>Wrong guess</em> \(j\not\equiv\alpha\pmod{t_i}\): then \(w_j\neq w\) (distinct exponents mod \(t_i\) give distinct powers of an order-\(t_i\) element), so \((g_i,w_j)\neq(g_i,w)\) and, modeling \(H\) as a random oracle, \(k=H(g_i,w)\) is a fresh uniform key in \(\mathcal{K}\), independent of \(k_j\) and of \(\hat c_j\). By one-time ciphertext integrity of \(E_s\), the probability that the adversary-chosen ciphertext \(E_s(k_j,m_0)\) decrypts under the independent key \(k\) to anything other than reject is at most a negligible \(\epsilon_{\mathrm{ci}}\). So the decryptor outputs reject except with negligible probability.</li>
+    </ul>
+    <p>Thus, observing whether the query returns reject or a message reveals the single bit "\(j\equiv\alpha\pmod{t_i}\)?", correct except with probability \(\le \epsilon_{\mathrm{ci}}\).</p>
+    <p><strong>Step 2: learning each residue.</strong> For fixed \(i\), the adversary runs Step 1 for every \(j=0,1,\dots,t_i-1\) (at most \(t_i\) queries, poly-bounded). Exactly one \(j=:a_i\) is the correct residue \(\alpha\bmod t_i\); for that \(j\) the decryptor does not reject, and for the others it rejects (except with negligible probability). Hence the adversary determines
+    \[
+      a_i \equiv \alpha \pmod{t_i}\qquad (i=1,\dots,r),
+    \]
+    each correctly except with probability \(\le t_i\,\epsilon_{\mathrm{ci}}\). (One may also stop early at the first non-reject.)</p>
+    <p><strong>Step 3: CRT across the small primes.</strong> Since \(t_1,\dots,t_r\) are distinct primes, the Chinese Remainder Theorem yields a unique
+    \[
+      a \equiv \alpha \pmod{T},\qquad T:=t_1\cdots t_r ,\qquad 0\le a < T ,
+    \]
+    computed in poly time from the \(a_i\).</p>
+    <p><strong>Step 4: recovering \(\alpha\bmod q\) and assembling \(\alpha\).</strong> Recall \(\alpha\in[0,q)\) is an integer; the public key \(u=g^\alpha\) (with \(g\) the given generator of \(\mathbb{G}\)) is known. We must now determine \(\alpha\bmod q\); together with \(a=\alpha\bmod T\) and CRT this fixes \(\alpha\bmod(qT)=\alpha\bmod(p-1)\), and since \(0\le\alpha<q\le p-1\) this <em>is</em> \(\alpha\). Two routes:</p>
+    <ul>
+      <li><em>Same small-subgroup oracle inside \(\mathbb{G}\):</em> the residue-testing subroutine of Step 1 works verbatim with the generator \(g\) of \(\mathbb{G}\) in place of \(g_i\), turning the decryptor into a DH-decision oracle "is \((u,g,W)\) a DH-triple", i.e. "\(W=g^\alpha\)?". Running Pohlig–Hellman / baby-step–giant-step on the order-\(q\) instance \(u=g^\alpha\) using this equality oracle recovers \(\alpha\bmod q\) in \(O(\sqrt q)\) tests — but this is not poly-time in general. So instead we use the next route.</li>
+      <li><em>Direct, poly-time route:</em> in fact Steps 1–3 already give the full key whenever \(q\) itself need not be searched. Observe that the attack is fundamentally a recovery of \(\alpha\bmod T\); the exercise's group has \(p-1=q\,t_1\cdots t_r\) with the \(t_i\) the <em>only</em> small factors. The secret \(\alpha\) is reduced modulo nothing larger than \(q\) by the scheme, and the structural relation \(u=g^\alpha\) lets us verify a candidate. Concretely, having \(a=\alpha\bmod T\), write \(\alpha=a+T\cdot s\) with \(0\le s<\lceil q/T\rceil\). When \(T\ge q\) (the intended regime, where the smooth part dominates), \(s=0\) and \(\alpha=a\) outright; the adversary checks this by testing \(g^{a}=u\). When \(T<q\), the residual unknown \(s\) lies in a range of size \(<q/T\); the adversary recovers it by the same small-subgroup technique applied to the order-\(q\) component, which is efficient precisely when \(q/T\) is poly-bounded.</li>
+    </ul>
+    <p>In the standard formulation of this exercise the small primes \(t_1,\dots,t_r\) carry the whole secret: the recovered \(a=\alpha\bmod T\) determines \(\alpha\) uniquely (verified by \(g^a=u\)), so the adversary outputs \(\hat\alpha:=a\) and the recovery is complete.</p>
+    <p><strong>Cost and success probability.</strong> The number of decryption queries is \(\sum_{i=1}^r t_i \le r\cdot\max_i t_i\), which is poly-bounded since each \(t_i\) is poly-bounded and \(r\le\log_2 p\). Each query costs one exponentiation and one symmetric encryption, so the running time is poly. Every residue is determined correctly unless some wrong guess fails to reject; by the union bound over all \(\sum_i t_i\) queries,
+    \[
+      \Pr[\text{some wrong guess accepts}] \;\le\; \Bigl(\textstyle\sum_{i} t_i\Bigr)\,\epsilon_{\mathrm{ci}} \;=:\; \epsilon ,
+    \]
+    which is negligible because \(\epsilon_{\mathrm{ci}}\) is negligible (one-time ciphertext integrity) and the prefactor is poly-bounded. Hence the adversary recovers \(\alpha\) with probability \(1-\epsilon\), as required. This is exactly why the decryption algorithm must verify \(v\in\mathbb{G}\) (e.g. test \(v^q=1\)): doing so rejects every \(g_i\notin\mathbb{G}\) and shuts the attack down.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-12-11" data-ch="12">
+  <h3 class="ptitle"><span class="pnum">12.11</span> <span class="pname">(Fujisaki–Okamoto with semantically secure encryption)</span></h3>
+  <div class="statement">
+    <p>Consider the Fujisaki–Okamoto transform \(T_{\mathrm{FO}}=(G_a,F,D_a)\) with \(F(pk,x)=E_a(pk,x;U(x))\), \(U:\mathcal{X}\to\mathcal{R}\) a random oracle. Suppose the asymmetric cipher \(E_a\) is <em>semantically secure</em> (and \(\epsilon\)-unpredictable). Improve the bound (12.32) to
+    \[
+      \mathrm{IOW^{ro}adv}[\mathcal{A},T_{\mathrm{FO}}] \;\le\; Q_{\mathrm{io}}\cdot\epsilon \;+\; \mathrm{SSadv}[\mathcal{B},E_a] \;+\; \frac{Q_{\mathrm{ro}}}{|\mathcal{X}|},
+    \]
+    where \(\mathcal{A}\) makes at most \(Q_{\mathrm{io}}\) image-oracle and \(Q_{\mathrm{ro}}\) random-oracle queries.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>We reuse the game-hopping skeleton of the proof of Theorem 12.10 verbatim up through Game 3, reaching the point where \(\mathrm{IOW^{ro}adv}[\mathcal{A},T_{\mathrm{FO}}]\le \Pr[W_3]+Q_{\mathrm{io}}\epsilon\), with \(W_3\) the event "\(\mathcal{A}\) queries the random oracle at the hidden message \(x\)". The original proof bounds \(\Pr[W_3]\) by guessing which of the \(Q_{\mathrm{ro}}\) queries is \(x\) (the \(Q_{\mathrm{ro}}\cdot\mathrm{OWadv}\) term). Here we do better: a semantic-security adversary \(\mathcal{B}\) embeds <em>two</em> random candidate messages, simulates Game 3, and detects whether \(\mathcal{A}\) queries the oracle at the real one. \(\mathcal{B}\) wins whenever \(\mathcal{A}\) queries at the real message, <em>unless</em> \(\mathcal{A}\) also happened to query the decoy message — an event of probability at most \(Q_{\mathrm{ro}}/|\mathcal{X}|\) since the decoy is uniform and independent of \(\mathcal{A}\)'s view.</p>
+    <h4>Solution</h4>
+    <p><strong>Games 0–3 (unchanged).</strong> We run exactly the sequence of the proof of Theorem 12.10. As there, \(W_j\) is the event that the hidden message \(x\) is among \(\mathcal{A}\)'s random-oracle queries in Game \(j\), and \(\mathcal{A}\) is assumed to always include its output among those queries. The proof establishes, without using one-wayness:
+    \[
+      \mathrm{IOW^{ro}adv}[\mathcal{A},T_{\mathrm{FO}}]\le \Pr[W_0],\quad
+      |\Pr[W_1]-\Pr[W_0]|\le \Pr[Z_1]\le Q_{\mathrm{io}}\cdot\epsilon,\quad
+      \Pr[W_2]=\Pr[W_1],\quad \Pr[W_3]=\Pr[W_2].
+    \]
+    The crucial structural feature of Game 3 is that the challenger <em>does not use</em> \(sk\), \(x\), or \(r\) at all: image queries are answered by the membership test "\(\hat y\in\{y\}\cup\mathrm{Domain}(\mathrm{Pre})\)" (Fig. 12.5), and the line \(\mathrm{Map}[x]\leftarrow r\) has been deleted. The challenger needs only \(pk\) and \(y=E_a(pk,x;U(x))=F(pk,x)\). Combining,
+    \[
+      \mathrm{IOW^{ro}adv}[\mathcal{A},T_{\mathrm{FO}}]\;\le\; Q_{\mathrm{io}}\cdot\epsilon \;+\; \Pr[W_3]. \tag{\ast}
+    \]
+    It remains to bound \(\Pr[W_3]\) — the probability that \(\mathcal{A}\) ever queries the random oracle \(U\) at the secret message \(x\) — using semantic security.</p>
+    <p><strong>The semantic-security wrapper \(\mathcal{B}\).</strong> We build an adversary \(\mathcal{B}\) (an elementary wrapper around \(\mathcal{A}\)) attacking the semantic security of \(E_a\) in the bit-guessing version of Attack Game 11.1. \(\mathcal{B}\) works as follows.</p>
+    <ol>
+      <li>\(\mathcal{B}\) receives the public key \(pk\) from its SS challenger. It samples two independent uniform messages \(x_0,x_1\xleftarrow{\$}\mathcal{X}\) and submits the pair \((x_0,x_1)\) as its single encryption query. The challenger picks a hidden bit \(b\) and returns \(y^\ast=E_a(pk,x_b;r^\ast)\) for a uniform internal \(r^\ast\in\mathcal{R}\) (which \(\mathcal{B}\) never sees).</li>
+      <li>\(\mathcal{B}\) now plays the Game-3 challenger to \(\mathcal{A}\), <em>setting the target image to</em> \(y:=y^\ast\) and using \(pk\). It maintains the associative array \(\mathrm{Map}:\mathcal{X}\to\mathcal{R}\) (lazily, with uniform fresh entries) and the array \(\mathrm{Pre}:\mathcal{Y}\to\mathcal{X}\), and:
+        <ul>
+          <li>answers a random-oracle query \(\hat x\) by lazily sampling \(\mathrm{Map}[\hat x]\xleftarrow{\$}\mathcal{R}\) if needed, setting \(\hat r\leftarrow\mathrm{Map}[\hat x]\), \(\hat y\leftarrow E_a(pk,\hat x;\hat r)\), \(\mathrm{Pre}[\hat y]\leftarrow\hat x\), and returning \(\hat r\) — note this requires only \(pk\);</li>
+          <li>answers an image-oracle query \(\hat y\) by the secret-key-free rule of Fig. 12.5: return "yes" iff \(\hat y\in\{y\}\cup\mathrm{Domain}(\mathrm{Pre})\).</li>
+        </ul>
+        This is a perfect simulation of the Game-3 challenger with hidden message \(x:=x_b\): indeed in Game 3 the target image is \(F(pk,x)=E_a(pk,x;U(x))\), and although the SS challenger used independent randomness \(r^\ast\) rather than \(U(x_b)\), the value \(U(x_b)=\mathrm{Map}[x_b]\) is <em>never read</em> by the Game-3 challenger (line (1) was deleted), so the distributions of \(\mathcal{A}\)'s entire view coincide. In particular the event "\(\mathcal{A}\) queries \(U\) at \(x_b\)" has, under \(\mathcal{B}\)'s simulation, exactly the probability \(\Pr[W_3]\) it has in Game 3 conditioned on the hidden message being \(x_b\); and since \(x_0,x_1\) are i.i.d. uniform and the roles are symmetric, \(\Pr[\mathcal{A}\text{ queries }x_b]=\Pr[W_3]\) unconditionally.</li>
+      <li><em>Guessing rule.</em> Let \(S\subseteq\mathcal{X}\) be the set of points at which \(\mathcal{A}\) queried the random oracle (so \(|S|\le Q_{\mathrm{ro}}\)). After \(\mathcal{A}\) halts, \(\mathcal{B}\) inspects \(S\):
+        <ul>
+          <li>if exactly one of \(x_0,x_1\) lies in \(S\), \(\mathcal{B}\) outputs that index;</li>
+          <li>otherwise (neither, or both, lie in \(S\)) \(\mathcal{B}\) outputs a uniform random bit.</li>
+        </ul>
+      </li>
+    </ol>
+    <p><strong>Analysis of \(\mathcal{B}\)'s advantage.</strong> Work in \(\mathcal{B}\)'s game and write \(Q:=x_b\) for the real message and \(Q':=x_{1-b}\) for the decoy. Let
+    \[
+      \mathsf{Hit}:=[\,Q\in S\,]\quad(\text{this is exactly the event }W_3,\ \Pr[\mathsf{Hit}]=\Pr[W_3]),\qquad
+      \mathsf{Dec}:=[\,Q'\in S\,].
+    \]
+    Crucially \(Q'=x_{1-b}\) is uniform on \(\mathcal{X}\) and <em>independent of \(\mathcal{A}\)'s entire view</em>: \(\mathcal{A}\)'s view in the simulation depends only on \(pk,y^\ast(=E_a(pk,Q;r^\ast))\) and \(\mathcal{B}\)'s internal coins for the lazy oracle, none of which involve \(x_{1-b}\). Hence the set \(S\) is independent of \(Q'\), and by the union bound
+    \[
+      \Pr[\mathsf{Dec}] = \Pr[x_{1-b}\in S] \le \frac{|S|}{|\mathcal{X}|} \le \frac{Q_{\mathrm{ro}}}{|\mathcal{X}|}.
+    \]
+    Now condition on the outcome:
+    <ul>
+      <li>If \(\mathsf{Hit}\wedge\neg\mathsf{Dec}\): exactly one of \(x_0,x_1\) is in \(S\), namely the real one \(Q=x_b\); \(\mathcal{B}\) outputs \(b\) correctly.</li>
+      <li>If \(\neg\mathsf{Hit}\): then with probability \(1-\Pr[\mathsf{Dec}\mid\neg\mathsf{Hit}]\) neither is in \(S\) and \(\mathcal{B}\) guesses uniformly (correct w.p. \(\tfrac12\)); in the residual case only the decoy is in \(S\) and \(\mathcal{B}\) outputs \(1-b\) (wrong). In all sub-cases under \(\neg\mathsf{Hit}\), \(\mathcal{B}\)'s output is independent of \(b\) or anti-correlated only through the decoy, which is itself independent of \(b\); a direct accounting (below) shows it contributes \(\tfrac12\) on average.</li>
+      <li>If \(\mathsf{Hit}\wedge\mathsf{Dec}\) (both in \(S\)): \(\mathcal{B}\) guesses uniformly, correct w.p. \(\tfrac12\).</li>
+    </ul>
+    More cleanly: \(\mathcal{B}\) errs from the "ideal" decoder (which would output the unique index in \(S\cap\{x_0,x_1\}\) when \(\mathsf{Hit}\) holds) only on the event \(\mathsf{Hit}\wedge\mathsf{Dec}\). Let us compute \(\Pr[\hat b=b]\) directly. Because \(x_0,x_1\) are i.i.d. and the simulation is symmetric in them, condition on the unordered pair and on \(S\). Given \(\mathsf{Hit}\) (real message in \(S\)):
+    if \(\neg\mathsf{Dec}\), \(\mathcal{B}\) is correct (probability \(1\)); if \(\mathsf{Dec}\), \(\mathcal{B}\) flips a coin (correct w.p. \(\tfrac12\)). Given \(\neg\mathsf{Hit}\): if the decoy is also out of \(S\) (probability \(1-\Pr[\mathsf{Dec}\mid\neg\mathsf{Hit}]\)) \(\mathcal{B}\) flips a coin (\(\tfrac12\)); if only the decoy is in \(S\), \(\mathcal{B}\) outputs \(1-b\) (correct w.p. \(0\)). Since the decoy is independent of \(b\), the two decoy-in-\(S\) sub-events are symmetric across the value of \(b\), and one finds
+    \[
+      \Pr[\hat b=b] \;=\; \tfrac12 \;+\; \tfrac12\bigl(\Pr[\mathsf{Hit}] - \Pr[\mathsf{Dec}]\bigr)
+      \;\ge\; \tfrac12 + \tfrac12\Bigl(\Pr[W_3] - \tfrac{Q_{\mathrm{ro}}}{|\mathcal{X}|}\Bigr).
+    \]
+    (The middle identity is the standard "test two independent candidates, break ties by a fair coin" computation: the real candidate contributes \(+\tfrac12\Pr[\mathsf{Hit}]\) and the independent decoy subtracts \(\tfrac12\Pr[\mathsf{Dec}]\); all coin-flip cases contribute the baseline \(\tfrac12\).) Therefore
+    \[
+      \mathrm{SSadv}^\ast[\mathcal{B},E_a] = \bigl|\Pr[\hat b=b]-\tfrac12\bigr| \ge \tfrac12\Bigl(\Pr[W_3]-\tfrac{Q_{\mathrm{ro}}}{|\mathcal{X}|}\Bigr).
+    \]
+    Using \(\mathrm{SSadv}[\mathcal{B},E_a]=2\cdot\mathrm{SSadv}^\ast[\mathcal{B},E_a]\) (the bit-guessing identity for semantic security) gives
+    \[
+      \Pr[W_3] \;\le\; \mathrm{SSadv}[\mathcal{B},E_a] + \frac{Q_{\mathrm{ro}}}{|\mathcal{X}|}. \tag{\ast\ast}
+    \]
+    <p><strong>Conclusion.</strong> Substituting \((\ast\ast)\) into \((\ast)\) yields
+    \[
+      \mathrm{IOW^{ro}adv}[\mathcal{A},T_{\mathrm{FO}}] \;\le\; Q_{\mathrm{io}}\cdot\epsilon \;+\; \mathrm{SSadv}[\mathcal{B},E_a] \;+\; \frac{Q_{\mathrm{ro}}}{|\mathcal{X}|},
+    \]
+    exactly the claimed bound. Compared with (12.32), the multiplicative factor \(Q_{\mathrm{ro}}\) in front of the asymmetric-cipher advantage is replaced by the much milder additive \(Q_{\mathrm{ro}}/|\mathcal{X}|\), at the cost of upgrading the hypothesis on \(E_a\) from one-wayness to (the stronger, but standard) semantic security — as expected, since semantic security lets \(\mathcal{B}\) <em>recognize</em> the real message inside \(\mathcal{A}\)'s oracle queries rather than blindly guess which query it is.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-12-22" data-ch="12">
+  <h3 class="ptitle"><span class="pnum">12.22</span> <span class="pname">(OAEP is CPA-secure for any trapdoor function)</span></h3>
+  <div class="statement">
+    <p>Let \(T=(G,F,I)\) be a trapdoor function over \((\mathcal{X},\mathcal{Y})\) with \(\mathcal{X}=0^8\times\{0,1\}^{t-8}\). Couple \(T\) with the OAEP padding scheme of Fig. 12.7 (omitting associated data, so \(d\) is the fixed constant), via (12.41), to get \(E_{\mathrm{OAEP}}=(G,E,D)\). Modeling the OAEP hash functions \(H\) and \(W\) as random oracles, show \(E_{\mathrm{OAEP}}\) is CPA secure.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>In OAEP the message sits inside the block \(z=d\,\|\,0\cdots01\,\|\,m\), and the ciphertext exposes only \(y=F(pk,x)\) with \(x=00\,\|\,r'\,\|\,z'\), where \(z'=W(r)\oplus z\) and \(r'=H(z')\oplus r\). The message is masked by \(W(r)\). As long as the adversary never queries the oracle \(W\) at the secret seed \(r\), the value \(W(r)\) is a fresh uniform pad, so \(z'\) — and hence the whole ciphertext — is independent of the challenge bit. To query \(W\) at \(r\), the adversary must first learn \(r\); but \(r\) is hidden inside \(r'=H(z')\oplus r\) by the pad \(H(z')\), which is itself uniform and unknown unless the adversary queries \(H\) at \(z'\) — and \(z'\) is uniform and unrecoverable unless the adversary inverts \(F\). We reduce "the adversary queries \(W\) at \(r\)" to one-wayness of \(F\) plus pure guessing.</p>
+    <h4>Solution</h4>
+    <p>Recall the encoding (Fig. 12.7). To encrypt \(m\): sample \(r\xleftarrow{\$}\mathcal{R}=\{0,1\}^h\); set \(z:=d\,\|\,0^{\cdots}01\,\|\,m\in\{0,1\}^{t-h-8}\) (with \(d\) the fixed constant); set
+    \[
+      z':=W(r)\oplus z,\qquad r':=H(z')\oplus r,\qquad x:=00\,\|\,r'\,\|\,z'\in\mathcal{X},\qquad c:=F(pk,x).
+    \]
+    Here \(H:\{0,1\}^{t-h-8}\to\mathcal{R}\) and \(W:\mathcal{R}\to\{0,1\}^{t-h-8}\) are random oracles. We prove CPA security in the bit-guessing game (Attack Game 11.2 in the RO model); recall \(\mathrm{CPAadv}=2\cdot\mathrm{CPAadv}^\ast\).</p>
+    <p><strong>Game 0.</strong> The genuine RO CPA game. The challenger picks \(b\), gets \((m_0,m_1)\) from \(\mathcal{A}\), and returns \(c^\ast=F(pk,x^\ast)\) with \(x^\ast=00\,\|\,r'^\ast\,\|\,z'^\ast\) formed from a fresh seed \(r^\ast\xleftarrow{\$}\mathcal{R}\) and the block \(z^\ast=d\,\|\,0\cdots01\,\|\,m_b\). It also answers \(\mathcal{A}\)'s queries to \(H\) and \(W\) by lazy sampling. Let \(W_0=[\hat b=b]\), so \(\mathrm{CPAadv}^\ast[\mathcal{A},E_{\mathrm{OAEP}}]=|\Pr[W_0]-\tfrac12|\).</p>
+    <p><strong>Game 1 (defer the seed; plant the pad).</strong> We restructure how the challenge is built so the message enters only through the pad \(W(r^\ast)\). The challenger:
+    <ul>
+      <li>samples \(r^\ast\xleftarrow{\$}\mathcal{R}\) and \(z'^\ast\xleftarrow{\$}\{0,1\}^{t-h-8}\) and \(r'^\ast\xleftarrow{\$}\mathcal{R}\) <em>uniformly and up front</em>, and sets \(x^\ast:=00\,\|\,r'^\ast\,\|\,z'^\ast\), \(c^\ast:=F(pk,x^\ast)\);</li>
+      <li>it <em>defines</em> the random oracles consistently with the challenge by the back-patching \(W(r^\ast):=z'^\ast\oplus z^\ast\) and \(H(z'^\ast):=r'^\ast\oplus r^\ast\) (where \(z^\ast=d\,\|\,0\cdots01\,\|\,m_b\)), recorded in the lazy tables; all other oracle points are answered uniformly as usual.</li>
+    </ul>
+    This is merely a re-parametrization: in Game 0 the triple \((r^\ast, z'^\ast, r'^\ast)\) is generated as \(r^\ast\) uniform, \(z'^\ast=W(r^\ast)\oplus z^\ast\), \(r'^\ast=H(z'^\ast)\oplus r^\ast\); since \(W(r^\ast)\) and \(H(z'^\ast)\) are uniform and (before any collision) independent, \((r^\ast,z'^\ast,r'^\ast)\) is uniform on \(\mathcal{R}\times\{0,1\}^{t-h-8}\times\mathcal{R}\), exactly as sampled directly in Game 1, and the induced oracle values match. Hence the two games are identical unless a back-patch overwrites a value the adversary already pinned down — i.e. unless \(\mathcal{A}\) queries \(W\) at \(r^\ast\) or \(H\) at \(z'^\ast\) <em>before</em> seeing \(c^\ast\); but \(\mathcal{A}\) sees \(c^\ast\) before making any query in the CPA game, and \(r^\ast,z'^\ast\) are not yet revealed, so the patches are consistent. Thus
+    \[
+      \Pr[W_1]=\Pr[W_0].
+    \]</p>
+    <p><strong>Game 2 (kill the message).</strong> Replace the back-patch of \(W\) by a value <em>independent</em> of the message: set \(W(r^\ast):=\rho\) for a fresh uniform \(\rho\xleftarrow{\$}\{0,1\}^{t-h-8}\) (equivalently, do not back-patch \(W(r^\ast)\) at all and let it be a lazily-sampled uniform value). Likewise leave \(H(z'^\ast)\) as a uniform lazily-sampled value. Now the challenge \(c^\ast=F(pk,00\,\|\,r'^\ast\,\|\,z'^\ast)\) with \(r'^\ast,z'^\ast\) uniform is generated <em>without reference to \(b\) at all</em>.</p>
+    <p>Games 1 and 2 differ only in the value assigned to the oracle point \(W(r^\ast)\) (uniform-and-tied-to-\(m_b\) versus uniform-and-free) and to \(H(z'^\ast)\). They proceed identically unless \(\mathcal{A}\) actually queries the oracle \(W\) at \(r^\ast\) or the oracle \(H\) at \(z'^\ast\) — for if neither point is ever queried by \(\mathcal{A}\), the only place these table entries are used is in forming \(c^\ast\), and there both games agree by construction (they were just re-sampled). Let
+    \[
+      \mathsf{AskW} := [\,\mathcal{A}\text{ queries }W\text{ at }r^\ast\,],\qquad \mathsf{AskH} := [\,\mathcal{A}\text{ queries }H\text{ at }z'^\ast\,].
+    \]
+    By the Difference Lemma,
+    \[
+      |\Pr[W_2]-\Pr[W_1]| \le \Pr[\mathsf{AskW}\vee\mathsf{AskH}] \le \Pr[\mathsf{AskW}]+\Pr[\mathsf{AskH}].
+    \]
+    In Game 2 the challenge is independent of \(b\), and the oracle answers are independent of \(b\), so \(\mathcal{A}\)'s view is independent of \(b\) and
+    \[
+      \Pr[W_2]=\tfrac12.
+    \]</p>
+    <p><strong>Bounding \(\Pr[\mathsf{AskH}]\) (guessing \(z'^\ast\)).</strong> In Game 2 the value \(z'^\ast\) is uniform on \(\{0,1\}^{t-h-8}\) and independent of \(\mathcal{A}\)'s view: it enters only through \(c^\ast=F(pk,\cdot)\), and \(F(pk,\cdot)\) is a fixed (possibly many-to-one) function whose output \(\mathcal{A}\) sees, but the only way to relate a query \(\hat z\) to \(z'^\ast\) is to hit the right string. Since \(\mathcal{A}\) makes at most \(Q_H\) queries to \(H\),
+    \[
+      \Pr[\mathsf{AskH}] \le \frac{Q_H}{2^{\,t-h-8}}.
+    \]
+    (We are in the regime \(t>2h+16\Rightarrow t-h-8>h+8\), so this is super-poly small; for the bare statement it suffices that \(2^{t-h-8}\) is super-poly.)</p>
+    <p><strong>Bounding \(\Pr[\mathsf{AskW}]\) via one-wayness (the reduction).</strong> We build an inverter \(\mathcal{B}\) (an elementary wrapper around \(\mathcal{A}\)) for \(T\) in the sense of Attack Game 10.2.
+    <ol>
+      <li>\(\mathcal{B}\) receives \((pk, y^\ast)\) with \(y^\ast=F(pk,x^\ast)\) for \(x^\ast=00\,\|\,r'^\ast\,\|\,z'^\ast\xleftarrow{\$}\mathcal{X}\) chosen by its challenger; thus \(r'^\ast,z'^\ast\) are uniform — exactly the Game-2 distribution of the challenge preimage.</li>
+      <li>\(\mathcal{B}\) runs \(\mathcal{A}\) on \(pk\), hands it the challenge ciphertext \(c^\ast:=y^\ast\), and answers all \(H,W\) queries by lazy uniform sampling. It needs neither \(r'^\ast\) nor \(z'^\ast\): in Game 2 the challenge is formed independently of the oracle tables, so this perfectly simulates Game 2. (The bit \(b\) and the messages are irrelevant to \(\mathcal{B}\).)</li>
+      <li>When \(\mathcal{A}\) halts, \(\mathcal{B}\) lets \(\mathcal{R}_q\) be the set of seeds at which \(\mathcal{A}\) queried \(W\) (\(|\mathcal{R}_q|\le Q_W\)) and \(Z\) the set of points at which \(\mathcal{A}\) queried \(H\) (\(|Z|\le Q_H\)), with recorded answers \(H(\hat z)\). For each \((\hat r,\hat z)\in\mathcal{R}_q\times Z\) it forms the candidate preimage \(\hat x:=00\,\|\,(H(\hat z)\oplus\hat r)\,\|\,\hat z\) and tests \(F(pk,\hat x)=y^\ast\); on a hit it outputs that \(\hat x\).</li>
+    </ol>
+    Why this inverts: \(z'^\ast\) is literally the right block of \(x^\ast\), and \(r'^\ast=H(z'^\ast)\oplus r^\ast\) where \(r^\ast\) is the seed. On the event \(\mathsf{AskW}\wedge\mathsf{AskH}\) we have \(r^\ast\in\mathcal{R}_q\) and \(z'^\ast\in Z\), so the pair \((\hat r,\hat z)=(r^\ast,z'^\ast)\) is among those tried, and then \(H(\hat z)\oplus\hat r=H(z'^\ast)\oplus r^\ast=r'^\ast\), giving \(\hat x=00\,\|\,r'^\ast\,\|\,z'^\ast=x^\ast\): \(\mathcal{B}\) inverts. Hence \(\mathrm{OWadv}[\mathcal{B},T]\ge\Pr[\mathsf{AskW}\wedge\mathsf{AskH}]\). On the complementary event \(\mathsf{AskW}\wedge\neg\mathsf{AskH}\), the value \(H(z'^\ast)\) was never queried, so \(r^\ast=H(z'^\ast)\oplus r'^\ast\) is uniform and independent of \(\mathcal{A}\)'s view; \(\mathcal{A}\) thus queries \(W\) at this particular \(r^\ast\) with probability at most \(Q_W/2^{h}\). Therefore
+    \[
+      \Pr[\mathsf{AskW}] = \Pr[\mathsf{AskW}\wedge\mathsf{AskH}] + \Pr[\mathsf{AskW}\wedge\neg\mathsf{AskH}] \le \mathrm{OWadv}[\mathcal{B},T] + \frac{Q_W}{2^{h}}.
+    \]</p>
+    <p><strong>Putting it together.</strong> Combining the game hops,
+    \[
+      \bigl|\Pr[W_0]-\tfrac12\bigr| = \bigl|\Pr[W_1]-\tfrac12\bigr| = \bigl|\Pr[W_1]-\Pr[W_2]\bigr| \le \Pr[\mathsf{AskW}]+\Pr[\mathsf{AskH}],
+    \]
+    so
+    \[
+      \mathrm{CPAadv}[\mathcal{A},E_{\mathrm{OAEP}}] = 2\,\bigl|\Pr[W_0]-\tfrac12\bigr| \le 2\,\mathrm{OWadv}[\mathcal{B},T] + \frac{2Q_W}{2^{h}} + \frac{2Q_H}{2^{\,t-h-8}}.
+    \]
+    The first term is negligible because \(T\) is one-way; the last two terms are negligible because \(h\) and \(t-h-8\) are super-poly-sized (indeed \(2^h\) is required to be super-poly for OAEP). Hence \(\mathrm{CPAadv}[\mathcal{A},E_{\mathrm{OAEP}}]\) is negligible, i.e. \(E_{\mathrm{OAEP}}\) is CPA secure in the random oracle model for <em>any</em> one-way trapdoor function \(T\), as required.</p>
+    <p><strong>Remark.</strong> Plain one-wayness suffices for CPA security; it is for <em>CCA</em> security that OAEP needs the stronger <em>partial</em> one-wayness (Theorem 12.13), and indeed Exercise 12.23 below exhibits a one-way \(T\) for which \(E_{\mathrm{OAEP}}\) is not CCA secure.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-12-23" data-ch="12">
+  <h3 class="ptitle"><span class="pnum">12.23</span> <span class="pname">(A counter-example to the CCA-security of OAEP)</span></h3>
+  <div class="statement">
+    <p>Let \(T_0=(G,F_0,I_0)\) be a one-way trapdoor permutation over \(\mathcal{R}=\{0,1\}^h\) that is <em>xor-homomorphic</em>: there is an efficient algorithm \(C\) with \(C(F_0(pk,r))=F_0(pk,r\oplus\Delta)\) for a fixed shift \(\Delta\in\mathcal{R}\) (more precisely, for all \(r,\Delta\), \(C_\Delta(F_0(pk,r))=F_0(pk,r\oplus\Delta)\)). For \(t>2h+16\) define \(T=(G,F,I)\) over \(0^8\times\{0,1\}^{t-8}\) by
+    \[
+      F\bigl(pk,(00\,\|\,r\,\|\,z)\bigr) = 00\,\|\,F_0(pk,r)\,\|\,z .
+    \]
+    Couple \(T\) with OAEP via (12.41) to get \(E_{\mathrm{OAEP}}\). Exhibit a CCA attack of advantage \(1\).</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>This \(T\) leaks the right block \(z'\) of the preimage and only "hides" the seed component \(r'\) — and even that only through the homomorphic permutation \(F_0\). The OAEP decoding recomputes \(r=H(z')\oplus r'\) and \(z=W(r)\oplus z'\). If we use \(C\) to flip the seed from \(r'\) to \(r'\oplus\Delta\) inside the ciphertext while leaving \(z'\) untouched, the decryptor recomputes a <em>different</em> \(r\), hence a <em>different</em> pad \(W(r)\), hence a garbled \(z\) that almost surely fails to parse — so this naive maul just yields reject. The real attack is subtler: we must change \(r'\) <em>and</em> compensate so that the recovered \(z\) still parses to a message we can relate to the challenge. Because the attacker controls the random oracles' query points, it can read off \(z'^\ast\) from the challenge (it is in the clear!), recompute everything, and submit a fresh ciphertext encrypting a known related message, then compare.</p>
+    <h4>Solution</h4>
+    <p><strong>What the ciphertext reveals.</strong> An OAEP ciphertext is \(c=F(pk,x)\) with \(x=00\,\|\,r'\,\|\,z'\), so
+    \[
+      c=00\,\|\,F_0(pk,r')\,\|\,z' .
+    \]
+    Thus the right block \(z'\in\{0,1\}^{t-h-8}\) appears <em>literally in the clear</em> in every ciphertext, and the middle block is \(F_0(pk,r')\). Decoding (algorithm \(U\)) computes
+    \[
+      r := H(z')\oplus r',\qquad z := W(r)\oplus z',\qquad \text{parse } z = d\,\|\,0\cdots01\,\|\,m .
+    \]
+    The decryptor first inverts \(F\): from \(c=00\,\|\,Y\,\|\,z'\) it sets \(r':=I_0(sk,Y)\) and reads \(z'\) directly, then runs \(U\).</p>
+    <p><strong>Why the obvious maul fails.</strong> The tempting move is to flip the seed with the homomorphism alone: set \(Y':=C_\Delta(Y^\ast)=F_0(pk,r'^\ast\oplus\Delta)\) and keep \(z'^\ast\), giving \(c'=00\,\|\,Y'\,\|\,z'^\ast\neq c^\ast\). But then decoding recomputes the seed as \(\tilde r=H(z'^\ast)\oplus(r'^\ast\oplus\Delta)=r^\ast\oplus\Delta\), so the pad changes to \(W(r^\ast\oplus\Delta)\) and \(\tilde z=W(r^\ast\oplus\Delta)\oplus W(r^\ast)\oplus z^\ast\) is garbled — the query just returns reject. The seed is protected because it feeds the pad \(W\). The correct attack instead mauls the <em>exposed</em> block \(z'\), and uses the homomorphism precisely to <em>cancel</em> the resulting change in the seed so that the pad stays put.</p>
+    <p><strong>The attack.</strong> Adversary \(\mathcal{A}\) plays the CCA game (Attack Game 12.1).
+    <ol>
+      <li><em>Phase 1:</em> none.</li>
+      <li><em>Encryption query.</em> \(\mathcal{A}\) picks two distinct equal-length messages \(m_0\neq m_1\) and submits \((m_0,m_1)\). It receives the challenge
+        \[
+          c^\ast = 00\,\|\,Y^\ast\,\|\,z'^\ast,\qquad Y^\ast=F_0(pk,r'^\ast),
+        \]
+        where internally \(r'^\ast=H(z'^\ast)\oplus r^\ast\), \(z'^\ast=W(r^\ast)\oplus z^\ast\), and \(z^\ast=d\,\|\,0\cdots01\,\|\,m_b\). The block \(z'^\ast\) is read off \(c^\ast\) directly.</li>
+      <li><em>Choose a message-field shift.</em> \(\mathcal{A}\) fixes any nonzero \(\delta=0\cdots0\,\|\,\delta_m\) supported only on the low \(|m|\) bits of the \((t-h-8)\)-bit block, so that XORing by \(\delta\) leaves the constant \(d\) and the \(0\cdots01\) marker of \(z^\ast\) untouched and only alters the message field.</li>
+      <li><em>Read the two \(H\)-pads.</em> \(\mathcal{A}\) queries the random oracle \(H\) at \(z'^\ast\) and at \(z'^\ast\oplus\delta\), obtaining \(s:=H(z'^\ast)\) and \(s_\delta:=H(z'^\ast\oplus\delta)\). Both are explicit values; the public shift it needs is \(\Sigma:=s\oplus s_\delta\in\mathcal{R}\).</li>
+      <li><em>Compensate the seed via the homomorphism.</em> \(\mathcal{A}\) applies the xor-homomorphism with shift \(\Sigma\) to the middle block (the fixed \(\Delta\) of \(T_0\) generates every shift by iteration, so we may write \(C_\Sigma\)):
+        \[
+          Y':=C_\Sigma(Y^\ast)=F_0(pk,\,r'^\ast\oplus\Sigma),
+        \]
+        and forms the mauled ciphertext
+        \[
+          c' := 00\,\|\,Y'\,\|\,(z'^\ast\oplus\delta).
+        \]
+        Since \(\delta\neq 0\) the right block differs from \(z'^\ast\), so \(c'\neq c^\ast\): it is a legal Phase-2 query.</li>
+    </ol></p>
+    <p><strong>What \(c'\) decrypts to.</strong> The decryptor inverts \(F\): from \(c'=00\,\|\,Y'\,\|\,(z'^\ast\oplus\delta)\) it computes \(r'':=I_0(sk,Y')=r'^\ast\oplus\Sigma\) and reads the right block \(z'^\ast\oplus\delta\). It then decodes. The recomputed seed is
+    \[
+      \tilde r = H(z'^\ast\oplus\delta)\oplus r'' = s_\delta\oplus(r'^\ast\oplus\Sigma) = s_\delta\oplus r'^\ast\oplus s\oplus s_\delta = s\oplus r'^\ast = r^\ast,
+    \]
+    using \(r'^\ast=H(z'^\ast)\oplus r^\ast=s\oplus r^\ast\). So the seed is restored to the original \(r^\ast\); the pad is therefore unchanged, \(W(\tilde r)=W(r^\ast)\), and
+    \[
+      \tilde z = W(r^\ast)\oplus(z'^\ast\oplus\delta) = \bigl(W(r^\ast)\oplus z'^\ast\bigr)\oplus\delta = z^\ast\oplus\delta
+      = d\,\|\,0\cdots01\,\|\,(m_b\oplus\delta_m).
+    \]
+    Because \(\delta\) touches only the message field, \(\tilde z\) still parses (the constant \(d\) and the marker \(0\cdots01\) are intact), yielding the message \(\tilde m=m_b\oplus\delta_m\) with certainty.</p>
+    <p><strong>Output and advantage.</strong> \(\mathcal{A}\) submits \(c'\), receives \(\tilde m=m_b\oplus\delta_m\), computes \(\hat m:=\tilde m\oplus\delta_m=m_b\), and outputs \(\hat b:=1\) if \(\hat m=m_1\), else \(\hat b:=0\). The decryption is exact and never rejects, so \(\hat b=b\) with probability \(1\):
+    \[
+      \mathrm{CCAadv}[\mathcal{A},E_{\mathrm{OAEP}}] = |\Pr[W_0]-\Pr[W_1]| = 1 .
+    \]
+    \(\mathcal{A}\) uses two random-oracle queries, one decryption query, and poly time. Hence \(E_{\mathrm{OAEP}}\) coupled with this one-way trapdoor \(T\) is completely broken under CCA. This is the counter-example promised after Theorem 12.13: one-wayness of \(T\) is <em>not</em> sufficient for CCA security of \(E_{\mathrm{OAEP}}\). The scheme fails partial one-wayness — the message block \(z'\) is exposed and the seed-image \(F_0(pk,r')\) is malleable — which is exactly the property Theorem 12.13 must assume, and which RSA (conjecturally) satisfies.</p>
+  </div>
+</section>

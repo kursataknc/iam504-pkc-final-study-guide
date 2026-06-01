@@ -1,0 +1,132 @@
+<section class="problem" id="ex-10-1" data-ch="10">
+  <h3 class="ptitle"><span class="pnum">10.1</span> <span class="pname">(Computationally unbounded adversaries)</span></h3>
+  <div class="statement">
+    <p>Show that an anonymous key exchange protocol \(P = (A,B)\) (as in Definition 10.1) cannot be secure against a computationally <em>unbounded</em> adversary. This explains why all the protocols in this chapter must rely on computational assumptions.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The shared key \(k\) and the transcript \(T_P\) are both deterministic functions of the random tapes of \(A\) and \(B\). Once the transcript is fixed, the only thing the adversary is missing is the secret randomness of the two parties. An unbounded adversary can simply search over all random tapes consistent with the observed transcript, replay the protocol in its head, and recompute \(k\) exactly. There is no computational obstacle, so the adversary wins outright.</p>
+    <h4>Solution</h4>
+    <p>Recall the setup of Attack Game 10.1. The protocol \(P = (A,B)\) is a pair of probabilistic machines; let \(r_A \in \{0,1\}^{\ell_A}\) and \(r_B \in \{0,1\}^{\ell_B}\) denote the (finite) random tapes consumed by \(A\) and \(B\) respectively during one execution. Once \(r_A\) and \(r_B\) are fixed, the entire execution is deterministic: every message is a deterministic function of the tapes and of the messages received so far. In particular both the transcript and the final shared key are deterministic functions</p>
+    <p>\[ T_P = \mathcal{T}(r_A, r_B), \qquad k = \mathcal{K}(r_A, r_B), \]</p>
+    <p>for fixed functions \(\mathcal{T}\) and \(\mathcal{K}\) determined by the code of \(A\) and \(B\). The randomness of \(T_P\) and \(k\) as random variables comes <em>solely</em> from the uniform choice of \((r_A, r_B)\).</p>
+    <p>We construct an explicit unbounded adversary \(\mathcal{A}\) achieving advantage \(\mathrm{AnonKEadv}[\mathcal{A}, P] = 1\). On input the transcript \(T_P\):</p>
+    <p>1. \(\mathcal{A}\) enumerates all pairs of tapes \((r_A', r_B') \in \{0,1\}^{\ell_A} \times \{0,1\}^{\ell_B}\) (a finite, though exponentially large, search — feasible for an unbounded adversary).<br>
+    2. For each candidate \((r_A', r_B')\), \(\mathcal{A}\) simulates the protocol from scratch using these tapes and computes the resulting transcript \(\mathcal{T}(r_A', r_B')\).<br>
+    3. \(\mathcal{A}\) picks any pair \((r_A^\star, r_B^\star)\) for which \(\mathcal{T}(r_A^\star, r_B^\star) = T_P\), and outputs \(\hat{k} := \mathcal{K}(r_A^\star, r_B^\star)\).</p>
+    <p>Such a consistent pair always exists, since the true tapes \((r_A, r_B)\) that produced \(T_P\) are themselves a witness; hence step 3 never fails. It remains to argue \(\hat{k} = k\) with probability \(1\). The key point is the <em>correctness</em> requirement of a key exchange protocol: whenever \(A\) and \(B\) run together they terminate holding the <em>same</em> value. In fact the shared key is a function of the transcript alone:</p>
+    <p>\[ \mathcal{T}(r_A', r_B') = \mathcal{T}(r_A'', r_B'') \;\Longrightarrow\; \mathcal{K}(r_A', r_B') = \mathcal{K}(r_A'', r_B''). \]</p>
+    <p>To see this, note that the value held by \(B\) at the end of the protocol is determined by \(B\)'s own tape \(r_B'\) together with the messages \(B\) received from \(A\) — and those received messages are exactly the \(A\)-to-\(B\) messages recorded in the transcript. Likewise \(A\)'s value is determined by \(r_A'\) and the \(B\)-to-\(A\) messages in the transcript. By correctness these two values coincide and equal the common key, so the common key depends only on the messages, i.e. only on the transcript. Now the consistent pair \((r_A^\star,r_B^\star)\) the adversary finds reproduces the very transcript \(T_P\); therefore the key it recomputes equals the key of the real execution that generated \(T_P\):</p>
+    <p>\[ \hat{k} = \mathcal{K}(r_A^\star, r_B^\star) = \mathcal{K}(r_A, r_B) = k. \]</p>
+    <p>Thus \(\mathcal{A}\) outputs \(k\) with probability \(1\), so \(\mathrm{AnonKEadv}[\mathcal{A}, P] = 1\), which is certainly non-negligible. No protocol can be secure against this adversary. Intuitively, the only thing protecting the key is the adversary's inability to <em>find</em> tapes consistent with the transcript; remove the computational bound and that protection evaporates. This is exactly why every protocol in this chapter rests on a computational hardness assumption (DL, CDH, DDH, RSA), as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-10-2" data-ch="10">
+  <h3 class="ptitle"><span class="pnum">10.2</span> <span class="pname">(Key exchange requires randomness from both parties)</span></h3>
+  <div class="statement">
+    <p>Consider an anonymous key exchange protocol \(P = (A,B)\) between two probabilistic machines (as in Definition 10.1). Suppose one of the machines is <em>deterministic</em>, i.e. it uses no random bits when participating in the protocol. Show that \(P\) cannot be secure: there is an <em>efficient</em> adversary \(\mathcal{A}\) for which \(\mathrm{AnonKEadv}[\mathcal{A}, P] = 1\). This explains why in all the protocols of this chapter both parties are randomized.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>If one party uses no randomness, then everything it does is a deterministic function of the messages it received — and those messages are all visible in the transcript. So the adversary can just <em>replay that party's program</em> on the transcript, step for step, and recompute its final output, which by correctness is the shared key. No search and no assumption are needed: the deterministic party leaves no secret behind.</p>
+    <h4>Solution</h4>
+    <p>Without loss of generality, suppose \(B\) is the deterministic machine (the argument is symmetric if it is \(A\)). Because \(B\) consumes no random bits, its behaviour during the protocol is a fixed deterministic function of \(B\)'s publicly known code and of the messages it receives. Concretely, the \(i\)-th message \(B\) sends is computed as</p>
+    <p>\[ m^{(B)}_i = B\big(\, m^{(A)}_1, m^{(A)}_2, \ldots, m^{(A)}_{i}\,\big), \]</p>
+    <p>and \(B\)'s final output (its copy of the shared key) is</p>
+    <p>\[ k = B_{\mathrm{out}}\big(\, m^{(A)}_1, \ldots, m^{(A)}_{t}\,\big), \]</p>
+    <p>where \(m^{(A)}_1, \ldots, m^{(A)}_t\) are exactly the messages \(A\) sent to \(B\). Crucially, all of these messages appear verbatim in the transcript \(T_P\) handed to the adversary in Attack Game 10.1, and the function \(B_{\mathrm{out}}(\cdot)\) is just \(B\)'s own efficient, publicly specified code.</p>
+    <p>We give the explicit efficient adversary \(\mathcal{A}\). On input the transcript \(T_P\):</p>
+    <p>1. \(\mathcal{A}\) parses out from \(T_P\) the subsequence of messages \(m^{(A)}_1, \ldots, m^{(A)}_t\) sent from \(A\) to \(B\).<br>
+    2. \(\mathcal{A}\) runs \(B\)'s code (with an empty random tape, since \(B\) is deterministic), feeding it exactly these messages in order, thereby perfectly simulating the deterministic machine \(B\).<br>
+    3. \(\mathcal{A}\) outputs the value \(\hat{k} := B_{\mathrm{out}}(m^{(A)}_1, \ldots, m^{(A)}_t)\) produced by this simulation.</p>
+    <p>This adversary is efficient: it does no more work than \(B\) does in a single honest run, plus trivial parsing of the transcript.</p>
+    <p>For correctness of the attack: since \(\mathcal{A}\) feeds \(B\)'s code precisely the messages \(B\) actually received in the real execution (read off the transcript), and \(B\) is deterministic, \(\mathcal{A}\)'s simulation reproduces \(B\)'s real internal computation exactly; in particular \(\hat{k}\) equals the value \(B\) actually output at the end of the real execution. By the correctness property of the protocol, that output is the shared key \(k\). Hence \(\hat{k} = k\) with probability \(1\), regardless of the random tape \(r_A\) used by \(A\). Therefore</p>
+    <p>\[ \mathrm{AnonKEadv}[\mathcal{A}, P] = \Pr[\hat{k} = k] = 1, \]</p>
+    <p>which is non-negligible, so \(P\) is insecure. The moral: a deterministic party contributes nothing that an eavesdropper cannot recompute from the transcript, so its messages and final key are effectively public. Genuine secrecy of the shared key therefore requires fresh secret randomness from <em>both</em> parties, as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-10-3" data-ch="10">
+  <h3 class="ptitle"><span class="pnum">10.3</span> <span class="pname">(DDH PRG)</span></h3>
+  <div class="statement">
+    <p>Let \(\mathbb{G}\) be a cyclic group of prime order \(q\) generated by \(g \in \mathbb{G}\). Consider the PRG defined over \((\mathbb{Z}_q^2,\ \mathbb{G}^3)\) by</p>
+    <p>\[ G(\alpha, \beta) := \big(g^\alpha,\ g^\beta,\ g^{\alpha\beta}\big). \]</p>
+    <p>Show that \(G\) is a secure PRG, assuming DDH holds in \(\mathbb{G}\).</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The idea is simple. The PRG output on a random seed is, by definition, a uniformly random DH-triple; a truly random element of the output space \(\mathbb{G}^3\) is a uniformly random triple. But distinguishing a random DH-triple from a random triple in \(\mathbb{G}^3\) is precisely the DDH game. So a PRG distinguisher <em>is</em> a DDH distinguisher — the reduction is the identity, an elementary wrapper that simply forwards its challenge.</p>
+    <h4>Solution</h4>
+    <p>We show that any efficient PRG adversary \(\mathcal{A}\) yields an efficient DDH adversary \(\mathcal{B}\), an elementary wrapper around \(\mathcal{A}\), with</p>
+    <p>\[ \mathrm{PRGadv}[\mathcal{A}, G] = \mathrm{DDHadv}[\mathcal{B}, \mathbb{G}]. \]</p>
+    <p><strong>Matching up the two distributions.</strong> In the PRG attack game (Attack Game 3.1) the adversary receives \(r\), where</p>
+    <p>in the real case (\(b=0\)): the challenger picks a seed \((\alpha,\beta) \xleftarrow{\$} \mathbb{Z}_q^2\) and sets \(r = G(\alpha,\beta) = (g^\alpha, g^\beta, g^{\alpha\beta})\);<br>
+    in the random case (\(b=1\)): the challenger picks \(r \xleftarrow{\$} \mathbb{G}^3\).</p>
+    <p>Compare this with the DDH attack game (Attack Game 10.6), where the challenger picks \(\alpha,\beta,\gamma \xleftarrow{\$} \mathbb{Z}_q\) and sends \((g^\alpha, g^\beta, w_b)\) with \(w_0 = g^{\alpha\beta}\) and \(w_1 = g^\gamma\). We record the two distributional facts that drive the proof:</p>
+    <p>(i) <em>Real PRG output \(=\) DDH Experiment 0.</em> When \((\alpha,\beta)\) is uniform over \(\mathbb{Z}_q^2\), the triple \((g^\alpha, g^\beta, g^{\alpha\beta})\) is exactly a uniformly random DH-triple, identical to the distribution of \((g^\alpha,g^\beta,g^{\alpha\beta})\) sent in DDH Experiment \(0\). (Here we used that \(g\) is a generator, so \(\delta \mapsto g^\delta\) is a bijection \(\mathbb{Z}_q \to \mathbb{G}\), making \(g^\alpha, g^\beta\) independent and uniform over \(\mathbb{G}\), with the third coordinate the determined value \(g^{\alpha\beta}\).)</p>
+    <p>(ii) <em>Random PRG output \(=\) DDH Experiment 1.</em> A uniform element of \(\mathbb{G}^3\) is a uniformly random triple. The DDH Experiment \(1\) output \((g^\alpha, g^\beta, g^\gamma)\) with \(\alpha,\beta,\gamma\) independent and uniform over \(\mathbb{Z}_q\) is likewise uniform over \(\mathbb{G}^3\) (again because \(\delta \mapsto g^\delta\) is a bijection, applied coordinatewise). Hence the two distributions are identical.</p>
+    <p><strong>The reduction \(\mathcal{B}\).</strong> Adversary \(\mathcal{B}\) plays the DDH game: it receives a challenge triple \((u, v, w) \in \mathbb{G}^3\). It does nothing but hand \(r := (u,v,w)\) to \(\mathcal{A}\) as the PRG challenge, and outputs whatever bit \(\hat{b}\) the adversary \(\mathcal{A}\) outputs. This is the promised elementary wrapper; it is efficient (it merely forwards \(3\) group elements and a bit) whenever \(\mathcal{A}\) is.</p>
+    <p>When \(\mathcal{B}\) is in DDH Experiment \(0\), by (i) the value \(r\) it forwards is distributed exactly as the PRG real output, so \(\mathcal{B}\) perfectly simulates the \(b=0\) PRG experiment for \(\mathcal{A}\). When \(\mathcal{B}\) is in DDH Experiment \(1\), by (ii) the value \(r\) is distributed exactly as the PRG random output, so \(\mathcal{B}\) perfectly simulates the \(b=1\) PRG experiment. Writing \(W_b\) for the event that \(\mathcal{A}\) (equivalently \(\mathcal{B}\)) outputs \(1\) in Experiment \(b\), the simulations are perfect, so the probability \(\mathcal{B}\) outputs \(1\) in DDH Experiment \(b\) equals the probability \(\mathcal{A}\) outputs \(1\) in PRG Experiment \(b\), for each \(b \in \{0,1\}\). Therefore</p>
+    <p>\[ \mathrm{DDHadv}[\mathcal{B}, \mathbb{G}] = \big|\Pr[W_0] - \Pr[W_1]\big| = \mathrm{PRGadv}[\mathcal{A}, G]. \]</p>
+    <p><strong>Conclusion.</strong> We obtain the bound</p>
+    <p>\[ \mathrm{PRGadv}[\mathcal{A}, G] \le \mathrm{DDHadv}[\mathcal{B}, \mathbb{G}], \]</p>
+    <p>(in fact with equality). Under the DDH assumption \(\mathrm{DDHadv}[\mathcal{B}, \mathbb{G}]\) is negligible for every efficient \(\mathcal{B}\); since \(\mathcal{B}\) is efficient whenever \(\mathcal{A}\) is, \(\mathrm{PRGadv}[\mathcal{A}, G]\) is negligible for every efficient \(\mathcal{A}\). Hence \(G\) is a secure PRG, as required. (Note the seed \((\alpha,\beta)\in\mathbb{Z}_q^2\) maps to a triple in \(\mathbb{G}^3\): the output carries one more group element than the seed information-theoretically determines, yet remains pseudorandom — so \(G\) genuinely expands.)</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-10-17" data-ch="10">
+  <h3 class="ptitle"><span class="pnum">10.17</span> <span class="pname">(Problems equivalent to CDH)</span></h3>
+  <div class="statement">
+    <p>Let \(\mathbb{G}\) be a cyclic group of prime order \(q\) with generator \(g\). Show that the following four problems are <em>deterministic poly-time equivalent</em> (all instances are with respect to the same \(\mathbb{G}, g\)):</p>
+    <p>(a) <strong>CDH:</strong> given \(g^\alpha, g^\beta\), compute \(g^{\alpha\beta}\).<br>
+    (b) <strong>Squaring (SQ):</strong> given \(g^\alpha\), compute \(g^{\alpha^2}\).<br>
+    (c) <strong>Inverse (INV):</strong> given \(g^\alpha\) with \(\alpha \ne 0\), compute \(g^{1/\alpha}\).<br>
+    (d) <strong>Division (DIV):</strong> given \(g^\alpha, g^\beta\) with \(\beta \ne 0\), compute \(g^{\alpha/\beta}\).</p>
+    <p>(Here \(1/\alpha\) and \(\alpha/\beta\) denote the inverse and quotient in the field \(\mathbb{Z}_q\), which exist because \(q\) is prime.)</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>This is pure algebra in the exponent: each problem performs one field operation (multiply, square, invert, divide) on hidden exponents. The point is that these operations are interrelated by polynomial identities — squaring plus addition yields multiplication via \(\alpha\beta = \tfrac12\big((\alpha+\beta)^2 - \alpha^2 - \beta^2\big)\); inversion is Fermat exponentiation \(\alpha^{-1}=\alpha^{q-2}\); division is multiply-by-inverse. Since adding, subtracting and scaling exponents are "free" (they are just products/quotients/powers of known group elements), each reduction is a deterministic poly-time wrapper making a polynomial number of oracle calls. No probabilities appear. We exhibit a cycle of reductions making all four mutually equivalent.</p>
+    <h4>Solution</h4>
+    <p><strong>Free operations.</strong> Given group elements \(g^x, g^y\) and a known integer constant \(c\), we can compute \(g^{x+y} = g^x g^y\), \(g^{x-y} = g^x (g^y)^{-1}\) and \(g^{cx} = (g^x)^c\) in deterministic polynomial time, <em>without</em> knowing \(x\) or \(y\). We call these "free" operations; each reduction below uses only free operations together with a bounded number of oracle calls. Since \(q\) is an odd prime, \(2\) is invertible mod \(q\); write \(2^{-1}\in\mathbb{Z}_q\) (computable by Euclid). We will establish the cycle</p>
+    <p>\[ \text{(a)} \to \text{(b)} \to \text{(c)} \to \text{(d)} \to \text{(a)}, \]</p>
+    <p>plus the reverse edge \(\text{(b)}\to\text{(a)}\); since deterministic poly-time reducibility composes (replacing each oracle call of one reduction by another polynomial-time reduction stays polynomial), a directed cycle through all four nodes makes every problem reducible to every other, hence all four are pairwise equivalent.</p>
+
+    <p><strong>(a) CDH \(\Rightarrow\) (b) Squaring.</strong> Given an SQ instance \(g^\alpha\), call the CDH oracle on the pair \((g^\alpha, g^\alpha)\). By definition CDH returns \(g^{\alpha\cdot\alpha}=g^{\alpha^2}\), the desired SQ output. One oracle call. So SQ is deterministic poly-time reducible to CDH.</p>
+
+    <p><strong>(b) Squaring \(\Rightarrow\) (a) CDH (the polarization identity).</strong> For all \(\alpha,\beta\in\mathbb{Z}_q\),</p>
+    <p>\[ \alpha\beta \;=\; 2^{-1}\big((\alpha+\beta)^2 - \alpha^2 - \beta^2\big) \pmod q. \tag{\ast} \]</p>
+    <p>Given \((g^\alpha,g^\beta)\): compute \(g^{\alpha+\beta}=g^\alpha g^\beta\) (free); call SQ three times to get \(g^{(\alpha+\beta)^2}\), \(g^{\alpha^2}\), \(g^{\beta^2}\); then form</p>
+    <p>\[ \Big(g^{(\alpha+\beta)^2}\cdot g^{-\alpha^2}\cdot g^{-\beta^2}\Big)^{\,2^{-1}} = g^{\,2^{-1}\big((\alpha+\beta)^2-\alpha^2-\beta^2\big)} = g^{\alpha\beta}. \]</p>
+    <p>Three SQ-calls and free operations. So CDH is deterministic poly-time reducible to SQ. Combined with the previous edge, (a) and (b) are already equivalent, and \((\ast)\) gives us a CDH routine \(\mathsf{C}(g^x,g^y)=g^{xy}\) whenever we possess an SQ (equivalently CDH) oracle — we use this below.</p>
+
+    <p><strong>(b) Squaring \(\Rightarrow\) (c) Inverse.</strong> By the previous paragraph an SQ oracle yields a full CDH routine \(\mathsf{C}(g^x,g^y)=g^{xy}\). We use it to invert one exponent via Fermat's little theorem: since \(\alpha\in\mathbb{Z}_q^\ast\) and \(\lvert\mathbb{Z}_q^\ast\rvert=q-1\),</p>
+    <p>\[ \alpha^{-1} = \alpha^{\,q-2} \pmod q, \qquad\text{so}\qquad g^{1/\alpha} = g^{\alpha^{q-2}}. \]</p>
+    <p>We compute \(g^{\alpha^{q-2}}\) from \(g^\alpha\) by exponentiation-by-squaring <em>in the exponent</em>. The basic step combines two running values by multiplying their \(\alpha\)-exponents:</p>
+    <p>\[ \mathsf{C}\big(g^{\alpha^i},\,g^{\alpha^j}\big) = g^{\alpha^i\cdot\alpha^j} = g^{\alpha^{i+j}}. \]</p>
+    <p>In particular squaring a running value \(g^{\alpha^k}\) gives \(g^{\alpha^{2k}}\), and multiplying by \(g^{\alpha}=g^{\alpha^1}\) increments the \(\alpha\)-exponent by \(1\). Running standard square-and-multiply over the \(O(\log q)\) bits of the exponent \(q-2\), starting from \(g^{\alpha^1}=g^\alpha\), lands on \(g^{\alpha^{q-2}}=g^{1/\alpha}\), using \(O(\log q)\) calls to \(\mathsf{C}\) (hence \(O(\log q)\) SQ-calls) and \(O(\log q)\) free operations. This is deterministic and polynomial-time. So INV is deterministic poly-time reducible to SQ.</p>
+
+    <p><strong>(c) Inverse \(\Rightarrow\) (d) Division.</strong> Given a DIV instance \((g^\alpha, g^\beta)\) with \(\beta\ne0\), we want \(g^{\alpha/\beta}\). First reduce DIV to INV plus one multiplication, then realize that multiplication from INV. Indeed</p>
+    <p>\[ \frac{\alpha}{\beta} = \alpha\cdot\beta^{-1}. \]</p>
+    <p>Compute \(g^{1/\beta}=\mathrm{INV}(g^\beta)\) (one INV call). It remains to multiply the exponents \(\alpha\) and \(\beta^{-1}\), given \(g^\alpha\) and \(g^{1/\beta}\). We obtain a multiplier from INV alone, by first extracting a squaring capability and then applying the polarization identity \((\ast)\). The squaring capability comes from the following verified identity (for \(t\ne0,-1\)):</p>
+    <p>\[ t^2 = \Big(\tfrac{1}{t}-\tfrac{1}{t+1}\Big)^{-1} - t, \qquad\text{since } \tfrac1t-\tfrac1{t+1}=\tfrac{1}{t(t+1)}=\tfrac{1}{t^2+t}. \tag{\dagger} \]</p>
+    <p>Thus INV gives SQ: compute \(g^{1/t}=\mathrm{INV}(g^t)\), \(g^{1/(t+1)}=\mathrm{INV}(g^t\cdot g)\), then \(g^{1/t}\,(g^{1/(t+1)})^{-1}=g^{1/(t^2+t)}\), invert to get \(g^{t^2+t}\), and divide by \(g^t\) to get \(g^{t^2}\) (degenerate exponents \(t\in\{0,-1\}\), detectable since \(g^t\in\{1,g^{-1}\}\), give \(g^{t^2}\in\{1,g\}\) directly). Composing this SQ with the polarization routine \((\ast)\) yields a CDH multiplier \(\mathsf{C}\) built from INV alone. Now finish the division:</p>
+    <p>\[ g^{\alpha/\beta} = \mathsf{C}\big(g^{\alpha},\,g^{1/\beta}\big) = g^{\alpha\cdot(1/\beta)}, \]</p>
+    <p>using one INV call for \(g^{1/\beta}\) plus the \(O(\log q)\)-call \(\mathsf{C}\) machinery (which itself is a constant number of INV/SQ calls and \((\ast)\)). All deterministic poly-time. So DIV is deterministic poly-time reducible to INV.</p>
+
+    <p><strong>(d) Division \(\Rightarrow\) (a) CDH.</strong> This closes the cycle. Given \((g^\alpha,g^\beta)\), we want \(g^{\alpha\beta}\). Handle degenerate cases first: if \(g^\alpha=1\) (so \(\alpha=0\)) or \(g^\beta=1\) (so \(\beta=0\)) the answer is \(g^{\alpha\beta}=g^0=1\); these are detected by comparing \(g^\alpha,g^\beta\) to the identity. Otherwise \(\alpha,\beta\ne0\). First obtain a squaring capability from DIV: feeding the numerator \(g^1=g\) gives inversion,</p>
+    <p>\[ \mathrm{DIV}(g^{1},\,g^{\delta}) = g^{1/\delta} \quad(\delta\ne0), \]</p>
+    <p>so DIV subsumes INV; and INV gives SQ by \((\dagger)\) above. With SQ in hand, the polarization identity \((\ast)\) computes</p>
+    <p>\[ g^{\alpha\beta} = \Big(g^{(\alpha+\beta)^2}\cdot g^{-\alpha^2}\cdot g^{-\beta^2}\Big)^{2^{-1}}, \]</p>
+    <p>where the three squares are produced by the DIV-based SQ routine. A constant number of DIV calls and free operations, all deterministic poly-time. So CDH is deterministic poly-time reducible to DIV.</p>
+
+    <p><strong>Wrap-up.</strong> We have exhibited the deterministic poly-time reductions</p>
+    <p>\[ \text{(a)}\Rightarrow\text{(b)},\quad \text{(b)}\Rightarrow\text{(a)},\quad \text{(b)}\Rightarrow\text{(c)},\quad \text{(c)}\Rightarrow\text{(d)},\quad \text{(d)}\Rightarrow\text{(a)}, \]</p>
+    <p>each using \(O(1)\) or \(O(\log q)\) oracle calls plus free group operations. The edges \(\text{(a)}\to\text{(b)}\to\text{(c)}\to\text{(d)}\to\text{(a)}\) form a directed cycle through all four problems. Since deterministic poly-time reducibility is transitive, every problem is reducible to every other along this cycle, and therefore problems (a), (b), (c), (d) are pairwise deterministic poly-time equivalent, as required.</p>
+  </div>
+</section>

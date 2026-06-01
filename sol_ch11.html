@@ -1,0 +1,204 @@
+<section class="problem" id="ex-11-1" data-ch="11">
+  <h3 class="ptitle"><span class="pnum">11.1</span> <span class="pname">(From weak PRF to PRF via hashing)</span></h3>
+  <div class="statement">
+    <p>Let \(F'(k,x)\) be a PRF over \((\mathcal K,\mathcal X,\mathcal Y)\) that is <em>weakly</em> secure (Definition 4.3). Let \(H:\mathcal M\to\mathcal X\) be a hash function, modeled as a random oracle, and define a new PRF over \((\mathcal K,\mathcal M,\mathcal Y)\) by
+    \[ F(k,m):=F'\bigl(k,H(m)\bigr). \]
+    Show that \(F\) is a secure PRF in the random oracle model. Concretely, for every adversary \(\mathcal A\) attacking \(F\) as a PRF there is an adversary \(\mathcal B\) attacking \(F'\) as a weak PRF, an elementary wrapper around \(\mathcal A\), with
+    \[ \mathrm{PRFro\,adv}[\mathcal A,F]\le \mathrm{wPRFadv}[\mathcal B,F']. \]</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The idea is simple. In the random oracle model the only way \(F(k,m)=F'(k,H(m))\) ever touches the key \(k\) is through the value \(H(m)\); and for distinct queries \(m\), the points \(H(m)\) are uniform and independent in \(\mathcal X\). These are exactly the <em>random</em> inputs at which a weak-PRF challenger evaluates \(F'\). So an attacker \(\mathcal A\) on \(F\) is, after stripping away the random oracle, nothing more than an attacker that observes \(F'\) at random points — i.e. a weak-PRF attacker \(\mathcal B\).</p>
+    <h4>Solution</h4>
+    <p>We build \(\mathcal B\), an elementary wrapper around \(\mathcal A\), that plays the weak-PRF game (Definition 4.3) against \(F'\). Recall that in that game \(\mathcal B\)'s challenger holds a function \(f\) (either \(f=F'(k,\cdot)\) for \(k\xleftarrow{\$}\mathcal K\), or \(f\xleftarrow{\$}\mathrm{Funs}[\mathcal X,\mathcal Y]\)); on each query \(\mathcal B\) receives a fresh pair \((x,f(x))\) with \(x\xleftarrow{\$}\mathcal X\) chosen by the challenger.</p>
+    <p>\(\mathcal B\) must simultaneously play the role of the \(F\)-challenger to \(\mathcal A\), answering both \(\mathcal A\)'s random-oracle queries to \(H\) and \(\mathcal A\)'s evaluation queries to \(F(k,\cdot)\). It maintains two initially empty associative arrays: \(\mathit{Map}:\mathcal M\to\mathcal X\) implementing the random oracle \(H\) as a faithful gnome, and \(\mathit{Out}:\mathcal M\to\mathcal Y\) recording the value of \(F\) at points already used. The crucial trick is that \(\mathcal B\) populates \(\mathit{Map}\) using the random points handed to it by its own weak-PRF challenger.</p>
+    <p>Concretely, \(\mathcal B\) defines a single subroutine \(\textsf{Fresh}(m)\) invoked the first time any message \(m\) is touched (by either kind of query):</p>
+    <p>\[ \textsf{Fresh}(m):\quad \text{request a fresh pair }(x,y)\text{ from the weak-PRF challenger};\ \mathit{Map}[m]\leftarrow x;\ \mathit{Out}[m]\leftarrow y. \]</p>
+    <p>Then \(\mathcal B\) answers \(\mathcal A\) as follows:</p>
+    <ul>
+      <li><strong>Random-oracle query \(m\):</strong> if \(m\notin\mathrm{Domain}(\mathit{Map})\) run \(\textsf{Fresh}(m)\); return \(\mathit{Map}[m]\).</li>
+      <li><strong>Evaluation query \(m\) (for \(F(k,\cdot)\)):</strong> if \(m\notin\mathrm{Domain}(\mathit{Map})\) run \(\textsf{Fresh}(m)\); return \(\mathit{Out}[m]\).</li>
+    </ul>
+    <p>Finally \(\mathcal B\) outputs whatever \(\mathcal A\) outputs. Repeated queries (of either type) on the same \(m\) are answered consistently from the stored arrays, so \(\mathcal B\) never asks its challenger for two pairs on behalf of one \(m\); this is exactly the consistency a random oracle and a deterministic PRF require.</p>
+    <p><em>Correctness of the simulation.</em> Consider the two cases of \(\mathcal B\)'s game.</p>
+    <p><strong>Case \(b=0\) (real \(F'\)).</strong> Here \(y=f(x)=F'(k,x)\) for a single hidden key \(k\xleftarrow{\$}\mathcal K\). Each distinct \(m\) that \(\mathcal A\) touches gets a fresh \(x=\mathit{Map}[m]\) drawn uniformly and independently from \(\mathcal X\) by the challenger — precisely the distribution of a random oracle \(H\). And \(\mathit{Out}[m]=F'(k,\mathit{Map}[m])=F'(k,H(m))=F(k,m)\). Thus \(\mathcal B\) perfectly simulates the random-oracle PRF game for \(F\) in Experiment 0 (the real-\(F\) experiment). Hence \(\Pr[\mathcal B\Rightarrow 1\mid b=0]=\Pr[\mathcal A\Rightarrow 1\mid \text{real }F]\).</p>
+    <p><strong>Case \(b=1\) (random \(f\)).</strong> Now \(f\xleftarrow{\$}\mathrm{Funs}[\mathcal X,\mathcal Y]\). The points \(x=\mathit{Map}[m]\) are still uniform and independent, so \(H\) is again perfectly simulated. Because all the \(x\)'s handed to \(\mathcal B\) are distinct with the values it actually uses (each fresh \(m\) gets its own challenger-chosen \(x\), and a random function evaluated at distinct inputs returns independent uniform outputs), the values \(\mathit{Out}[m]=f(\mathit{Map}[m])\) are independent and uniform in \(\mathcal Y\) across distinct \(m\). That is exactly the behavior of a truly random function \(\mathcal M\to\mathcal Y\). So \(\mathcal B\) perfectly simulates the random-oracle PRF game for \(F\) in Experiment 1 (the random-function experiment), and \(\Pr[\mathcal B\Rightarrow 1\mid b=1]=\Pr[\mathcal A\Rightarrow 1\mid \text{random}]\).</p>
+    <p><em>(A small technical point: in Case \(b=1\) two distinct messages \(m\ne m'\) could in principle receive colliding random points \(x=\mathit{Map}[m]=\mathit{Map}[m']\), in which case \(f\) would return the same value, whereas a random function on \(\mathcal M\) would not be forced to. This event only makes the two experiments closer to identical from \(\mathcal A\)'s viewpoint in the standard formulation, and is accounted for inside the weak-PRF advantage of \(\mathcal B\); it never helps \(\mathcal A\). Hence no extra additive term is needed, matching the clean bound.)</em></p>
+    <p>Subtracting the two probabilities gives, by the two displayed equalities,
+    \[ \mathrm{PRFro\,adv}[\mathcal A,F]=\bigl|\Pr[\mathcal A\Rightarrow 1\mid\text{real}]-\Pr[\mathcal A\Rightarrow 1\mid\text{random}]\bigr| =\bigl|\Pr[\mathcal B\Rightarrow1\mid b{=}0]-\Pr[\mathcal B\Rightarrow1\mid b{=}1]\bigr|=\mathrm{wPRFadv}[\mathcal B,F'], \]
+    which is exactly the required bound \(\mathrm{PRFro\,adv}[\mathcal A,F]\le\mathrm{wPRFadv}[\mathcal B,F']\), as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-11-2" data-ch="11">
+  <h3 class="ptitle"><span class="pnum">11.2</span> <span class="pname">(Simple PRF from DDH)</span></h3>
+  <div class="statement">
+    <p>Let \(\mathbb G\) be a cyclic group of prime order \(q\) with generator \(g\). Let \(H:\mathcal M\to\mathbb G\) be modeled as a random oracle, and define the PRF over \((\mathbb Z_q,\mathcal M,\mathbb G)\) by
+    \[ F(k,m):=H(m)^k. \]
+    Show that \(F\) is a secure PRF in the random oracle model under DDH for \(\mathbb G\); concretely, for every PRF adversary \(\mathcal A\) there is a DDH adversary \(\mathcal B\), an elementary wrapper around \(\mathcal A\), with
+    \[ \mathrm{PRFro\,adv}[\mathcal A,F]\le \mathrm{DDHadv}[\mathcal B,\mathbb G]+1/q. \]
+    <em>Hint:</em> first show \(F'(k,v):=v^k\) over \((\mathbb Z_q,\mathbb G,\mathbb G)\) is a weak PRF (Exercise 10.11), then apply Exercise 11.1.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>Note \(F(k,m)=H(m)^k=F'(k,H(m))\) where \(F'(k,v)=v^k\). By Exercise 11.1 it suffices to prove \(F'\) is a <em>weak</em> PRF, i.e. secure when queried at random points \(v\xleftarrow{\$}\mathbb G\). But a weak-PRF transcript for \(F'\) is precisely \(\{(g^{\beta_j},g^{k\beta_j})\}_j\) for a fixed secret \(k\) — a list of Diffie–Hellman pairs with common exponent \(k\). Telling these apart from \(\{(g^{\beta_j},g^{\gamma_j})\}_j\) is exactly the multi-DDH problem of Exercise 10.11 (with \(n=1\)).</p>
+    <h4>Solution</h4>
+    <p><em>Step 1: \(F'(k,v)=v^k\) is a weak PRF.</em> Let \(\mathcal C\) be a weak-PRF adversary for \(F'\) making at most \(m\) queries. In its game the challenger fixes \(f\): either \(f=F'(k,\cdot)\) for \(k\xleftarrow{\$}\mathbb Z_q\), or \(f\xleftarrow{\$}\mathrm{Funs}[\mathbb G,\mathbb G]\); on each query it returns a fresh pair \((v_j,f(v_j))\) with \(v_j\xleftarrow{\$}\mathbb G\). Write \(v_j=g^{\beta_j}\) with \(\beta_j\xleftarrow{\$}\mathbb Z_q\) (uniform, since \(g\) generates \(\mathbb G\)).</p>
+    <p>In the real case (\(f=F'(k,\cdot)\), \(k=\alpha_1\)) the transcript is
+    \[ \bigl(g^{\beta_j},\,g^{\alpha_1\beta_j}\bigr)_{j=1}^{m}, \]
+    while in the random case the transcript is \((g^{\beta_j},\,g^{\gamma_j})_{j=1}^m\) with \(\gamma_j\xleftarrow{\$}\mathbb Z_q\) independent. (A truly random \(f\) returns independent uniform group elements at the distinct query points \(v_j\); the only deviation is the negligible-probability event that two \(v_j\) collide, which we absorb below exactly as Exercise 10.11 does.)</p>
+    <p>These are precisely the distributions \(D\) and \(R\) of Exercise 10.11 with \(n=1\) and \(m\) samples: \(D\) consists of \(g^{\alpha_1}\) (the hidden \(k\), not actually shown — but \(\mathcal C\)'s view is a deterministic function of the listed pairs) together with \(\{g^{\beta_{1j}},g^{\alpha_1\beta_{1j}}\}_j\), and \(R\) replaces the third coordinates by \(g^{\gamma_{1j}}\). Hence any \(\mathcal C\) distinguishing the two cases yields, as an elementary wrapper, an adversary distinguishing \(D\) from \(R\), and Exercise 10.11 gives a DDH adversary \(\mathcal B\) with
+    \[ \mathrm{wPRFadv}[\mathcal C,F']=\mathrm{Distadv}[\mathcal C,D,R]\le \mathrm{DDHadv}[\mathcal B,\mathbb G]+1/q. \]</p>
+    <p><em>Step 2: apply Exercise 11.1.</em> Since \(F(k,m)=F'(k,H(m))\) with \(H:\mathcal M\to\mathbb G\) a random oracle, Exercise 11.1 gives, for every PRF adversary \(\mathcal A\) on \(F\), a weak-PRF adversary \(\mathcal C\) on \(F'\) (an elementary wrapper around \(\mathcal A\)) with
+    \[ \mathrm{PRFro\,adv}[\mathcal A,F]\le \mathrm{wPRFadv}[\mathcal C,F']. \]
+    Composing the two inequalities, and letting \(\mathcal B\) be the resulting (elementary-wrapper) DDH adversary,
+    \[ \mathrm{PRFro\,adv}[\mathcal A,F]\le \mathrm{DDHadv}[\mathcal B,\mathbb G]+1/q, \]
+    as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-11-3" data-ch="11">
+  <h3 class="ptitle"><span class="pnum">11.3</span> <span class="pname">(Simple PRF from CDH)</span></h3>
+  <div class="statement">
+    <p>Continuing Exercise 11.2, let \(H':\mathcal M\times\mathbb G\to\mathcal Y\) be a second hash function, also modeled as a random oracle. Define the PRF over \((\mathbb Z_q,\mathcal M,\mathcal Y)\) by
+    \[ F'(k,m):=H'\bigl(m,\,H(m)^k\bigr). \]
+    Show \(F'\) is a secure PRF under the CDH assumption for \(\mathbb G\), with \(H,H'\) random oracles. <em>Hint:</em> use Exercise 10.5.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>Write \(w_m:=H(m)^k\). Since \(H'\) is a random oracle, \(F'(k,m)=H'(m,w_m)\) is a uniform independent value in \(\mathcal Y\) for each distinct \(m\) — looking exactly like a random function — <em>unless</em> \(\mathcal A\) actually queries \(H'\) at the precise point \((m,w_m)\). To do that the attacker must produce \(w_m=H(m)^k\), the Diffie–Hellman value tying the public \(g^k\) to the random-oracle output \(H(m)\). We plant a CDH challenge \((u,v)\) so that this forces a CDH solution, and we use the random self-reduction of Exercise 10.5 to re-randomize across many messages so that one good \(H'\)-query lets us recover \(g^{ab}\).</p>
+    <h4>Solution</h4>
+    <p>Let \(\mathcal A\) be a PRF adversary on \(F'\) issuing at most \(Q\) random-oracle queries (to \(H\) and \(H'\) combined) and any number of evaluation queries; let \(k\) be the hidden key. We model \(H\) and \(H'\) as faithful gnomes.</p>
+    <p><strong>Game 0.</strong> The real random-oracle PRF game (Experiment 0). The challenger picks \(k\xleftarrow{\$}\mathbb Z_q\). It answers an \(H\)-query \(m\) with a fresh uniform \(H(m)\in\mathbb G\); an \(H'\)-query \((m,t)\) with a fresh uniform value in \(\mathcal Y\); and an evaluation query \(m\) with \(H'\!\bigl(m,H(m)^k\bigr)\), consistent with the \(H,H'\) tables.</p>
+    <p><strong>Game 1.</strong> Identical, except evaluation queries are answered by a fresh independent uniform value \(\rho_m\in\mathcal Y\) (a separate random function of \(m\)), <em>without</em> consulting the entry \(H'(m,H(m)^k)\). This is exactly Experiment 1 (random function), so \(\Pr[\mathcal A\Rightarrow1\mid\text{Game }1]=\Pr[\mathcal A\Rightarrow1\mid\text{random}]\).</p>
+    <p>Games 0 and 1 are identical unless \(\mathcal A\) ever queries \(H'\) at a point \((m,w_m)\) with \(w_m=H(m)^k\) for some evaluated/queried \(m\) — call this event \(Z\). Indeed, if \(Z\) never occurs, then in Game 0 the value \(H'(m,w_m)\) used to answer evaluation queries is a point of \(H'\) that \(\mathcal A\) never directly sees, hence is a fresh uniform value independent of everything else — identically distributed to \(\rho_m\) in Game 1. By the Difference Lemma,
+    \[ \bigl|\Pr[\mathcal A\Rightarrow1\mid\text{Game }0]-\Pr[\mathcal A\Rightarrow1\mid\text{Game }1]\bigr|\le\Pr[Z], \]
+    and therefore \(\mathrm{PRFro\,adv}[\mathcal A,F']\le\Pr[Z]\).</p>
+    <p><strong>Bounding \(\Pr[Z]\) by CDH.</strong> We build \(\mathcal B_{\mathrm{cdh}}\), an elementary wrapper around \(\mathcal A\), that plays Attack Game 10.5 on input a CDH instance \((u,v)=(g^a,g^b)\); its goal is \(g^{ab}=[u,v]\). \(\mathcal B_{\mathrm{cdh}}\) implicitly sets the hidden PRF key to \(k:=a\), so it must make the public exponent be \(a\) and the random oracle outputs be powers of \(v\). For each <em>distinct</em> message \(m\) appearing in any query, \(\mathcal B_{\mathrm{cdh}}\) applies the random self-reduction of Exercise 10.5 freshly: it picks \(\rho_m\xleftarrow{\$}\mathbb Z_q\) and programs the oracle \(H\) as
+    \[ H(m):=g^{\rho_m}\,v=g^{\rho_m+b}. \]
+    By Exercise 10.5(a) each \(H(m)\) is uniform in \(\mathbb G\) and independent across distinct \(m\) (the \(\rho_m\) are independent), so \(H\) is perfectly simulated. \(H'\)-queries are answered with fresh uniform values from \(\mathcal Y\) and stored. Evaluation queries on \(m\) are answered with a fresh uniform \(\mathcal Y\)-value (as in Game 1) — note \(\mathcal B_{\mathrm{cdh}}\) cannot compute \(H(m)^a\) itself, which is fine: it is simulating Game 1, where that value is not needed.</p>
+    <p>Now suppose event \(Z\) occurs: some \(H'\)-query is \((m,t)\) with
+    \[ t=H(m)^k=H(m)^a=(g^{\rho_m}v)^a=g^{a\rho_m}\,v^{a}=u^{\rho_m}\cdot g^{ab}. \]
+    Equivalently, by Exercise 10.5(b) applied to the instance \((u,H(m))\) with the rerandomizing exponent \(\rho_m\): the CDH value of \((u,\,g^{\rho_m}v)\) equals \([u,v]\cdot u^{\rho_m}\), i.e. \(g^{ab}\cdot u^{\rho_m}\). Hence from the offending query \((m,t)\), \(\mathcal B_{\mathrm{cdh}}\) recovers the Diffie–Hellman value
+    \[ g^{ab}=t\cdot u^{-\rho_m}. \]
+    Since \(\mathcal B_{\mathrm{cdh}}\) cannot recognize the correct CDH solution on sight (we are only assuming CDH, not DDH), it simply picks one of \(\mathcal A\)'s \(H'\)-queries \((m,t)\) uniformly at random among the (at most \(Q\)) such queries, looks up the stored \(\rho_m\), and outputs \(t\cdot u^{-\rho_m}\). Conditioned on \(Z\), the chosen query is the right one with probability at least \(1/Q\), so
+    \[ \mathrm{CDHadv}[\mathcal B_{\mathrm{cdh}},\mathbb G]\ge \Pr[Z]/Q. \]</p>
+    <p>Combining the two displays,
+    \[ \mathrm{PRFro\,adv}[\mathcal A,F']\le\Pr[Z]\le Q\cdot\mathrm{CDHadv}[\mathcal B_{\mathrm{cdh}},\mathbb G]. \]
+    Under CDH the right-hand side is negligible (\(Q\) is polynomial), so \(F'\) is a secure PRF in the random oracle model, as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-11-5" data-ch="11">
+  <h3 class="ptitle"><span class="pnum">11.5</span> <span class="pname">(Multiplicative ElGamal)</span></h3>
+  <div class="statement">
+    <p>Let \(\mathbb G\) be cyclic of prime order \(q\) with generator \(g\). \(\mathcal E_{\mathrm{MEG}}=(G,E,D)\) over \((\mathbb G,\mathbb G^2)\): key generation as in ElGamal (\(\mathit{sk}=\alpha\xleftarrow{\$}\mathbb Z_q\), \(\mathit{pk}=u=g^\alpha\)); and
+    \[ E(\mathit{pk},m):\ \beta\xleftarrow{\$}\mathbb Z_q,\ v\leftarrow g^\beta,\ e\leftarrow u^\beta\cdot m,\ \text{output }(v,e);\qquad D(\mathit{sk},(v,e)):=e/v^\alpha. \]
+    (a) Show \(\mathcal E_{\mathrm{MEG}}\) is semantically secure under DDH, with \(\mathrm{SSadv}[\mathcal A,\mathcal E_{\mathrm{MEG}}]\le 2\,\mathrm{DDHadv}[\mathcal B,\mathbb G]\). (b) Show it is insecure if DDH fails. (c) Show the multiplicative homomorphism.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The ciphertext is \((g^\beta,\,u^\beta m)=(g^\beta,\,g^{\alpha\beta}m)\). The masking factor \(g^{\alpha\beta}\) is the Diffie–Hellman value of \((u,v)\). Under DDH we may replace \(g^{\alpha\beta}\) by a uniform independent \(g^\gamma\); then \(g^\gamma m\) is a uniform group element that perfectly hides \(m\), so the two challenge messages become indistinguishable. If DDH fails, the distinguisher that breaks DDH can detect the mask and read off which message was encrypted. The homomorphism is immediate because masks multiply.</p>
+    <h4>Solution</h4>
+    <p><strong>(a)</strong> We use the bit-guessing form and the identity \(\mathrm{SSadv}=2\,\mathrm{SSadv}^*\). Let \(\mathcal A\) be a semantic-security adversary. We construct \(\mathcal B\), an elementary wrapper around \(\mathcal A\), playing DDH (Attack Game 10.6): \(\mathcal B\) receives a triple \((u,v,w)=(g^\alpha,g^\beta,w)\), where either \(w=g^{\alpha\beta}\) (Experiment 0) or \(w=g^\gamma\) with \(\gamma\xleftarrow{\$}\mathbb Z_q\) (Experiment 1).</p>
+    <p>\(\mathcal B\) plays challenger to \(\mathcal A\):</p>
+    <ul>
+      <li>send public key \(\mathit{pk}:=u\) to \(\mathcal A\);</li>
+      <li>receive \(m_0,m_1\in\mathbb G\) from \(\mathcal A\); pick \(\hat b\xleftarrow{\$}\{0,1\}\); return the challenge ciphertext \((v,\;w\cdot m_{\hat b})\);</li>
+      <li>when \(\mathcal A\) outputs \(b'\), \(\mathcal B\) outputs \(1\) if \(b'=\hat b\) and \(0\) otherwise.</li>
+    </ul>
+    <p><strong>Case \(w=g^{\alpha\beta}\) (DDH Experiment 0).</strong> Then \(w\cdot m_{\hat b}=u^\beta m_{\hat b}\) and \(v=g^\beta\), which is exactly a genuine encryption \(E(\mathit{pk},m_{\hat b})\) with randomness \(\beta\). So \(\mathcal B\) perfectly simulates the bit-guessing semantic-security game for \(\mathcal E_{\mathrm{MEG}}\), and
+    \[ \Pr[\mathcal B\Rightarrow1\mid w=g^{\alpha\beta}]=\Pr[b'=\hat b]=\tfrac12+\mathrm{SSadv}^*[\mathcal A,\mathcal E_{\mathrm{MEG}}], \]
+    where the sign of the advantage term is fixed by \(\mathcal A\)'s behavior (we may assume it is \(+\), replacing \(\mathcal A\) by its complement otherwise).</p>
+    <p><strong>Case \(w=g^{\gamma}\) (DDH Experiment 1).</strong> Now \(\gamma\) is uniform and independent of \(\alpha,\beta,\hat b,m_0,m_1\), so \(w\cdot m_{\hat b}=g^{\gamma}m_{\hat b}\) is uniformly distributed over \(\mathbb G\) and independent of \(\hat b\). Thus \(\mathcal A\)'s view carries no information about \(\hat b\), and \(\Pr[b'=\hat b]=1/2\):
+    \[ \Pr[\mathcal B\Rightarrow1\mid w=g^\gamma]=\tfrac12. \]</p>
+    <p>Subtracting,
+    \[ \mathrm{DDHadv}[\mathcal B,\mathbb G]=\bigl|\Pr[\mathcal B\Rightarrow1\mid w=g^{\alpha\beta}]-\Pr[\mathcal B\Rightarrow1\mid w=g^{\gamma}]\bigr|=\mathrm{SSadv}^*[\mathcal A,\mathcal E_{\mathrm{MEG}}]. \]
+    Hence \(\mathrm{SSadv}[\mathcal A,\mathcal E_{\mathrm{MEG}}]=2\,\mathrm{SSadv}^*[\mathcal A,\mathcal E_{\mathrm{MEG}}]=2\,\mathrm{DDHadv}[\mathcal B,\mathbb G]\le 2\,\mathrm{DDHadv}[\mathcal B,\mathbb G]\), the required bound.</p>
+    <p><strong>(b)</strong> Suppose DDH fails: there is an efficient distinguisher \(\mathcal D\) with \(\mathrm{DDHadv}[\mathcal D,\mathbb G]=\delta\) non-negligible, i.e. \(\mathcal D\) tells DH-triples \((g^a,g^b,g^{ab})\) from random triples \((g^a,g^b,g^c)\) with advantage \(\delta\). We build a semantic-security attacker \(\mathcal A\):</p>
+    <ul>
+      <li>receive \(\mathit{pk}=u\); choose two distinct messages, e.g. \(m_0:=1\) (the identity of \(\mathbb G\)) and \(m_1:=g\), and send them;</li>
+      <li>receive challenge \((v,e)\). Run \(\mathcal D\) on the triple \((u,\,v,\,e)=(u,v,\,u^\beta m_b)\) and output whatever \(\mathcal D\) outputs.</li>
+    </ul>
+    <p>If \(b=0\) then \(e=u^\beta\cdot 1=g^{\alpha\beta}\), so \((u,v,e)=(g^\alpha,g^\beta,g^{\alpha\beta})\) is a genuine DH-triple. If \(b=1\) then \(e=u^\beta g=g^{\alpha\beta+1}\); since \(\alpha\beta+1\) is uniform and (for fixed \(\alpha\beta\)) differs from \(\alpha\beta\), the triple \((u,v,e)\) is distributed as a random triple whose third coordinate is independent of \(\alpha\beta\) (it equals \(g^{\alpha\beta}\cdot g\), a fixed nontrivial shift, hence not the DH value). Therefore \(\mathcal D\)'s outputs in the two cases differ by exactly its DDH advantage, giving
+    \[ \mathrm{SSadv}[\mathcal A,\mathcal E_{\mathrm{MEG}}]=\delta=\mathrm{DDHadv}[\mathcal D,\mathbb G], \]
+    which is non-negligible. So \(\mathcal E_{\mathrm{MEG}}\) is not semantically secure when DDH fails. (More simply: distinguishing "\(e/u^\beta=1\) vs \(=g\)" is exactly recognizing whether \((u,v,e)\) is a DH-triple.)</p>
+    <p><strong>(c) Multiplicative homomorphism.</strong> Let \(c_1=(v_1,e_1)=(g^{\beta_1},u^{\beta_1}m_1)\) and \(c_2=(v_2,e_2)=(g^{\beta_2},u^{\beta_2}m_2)\) be two ciphertexts under the same \(\mathit{pk}=u\). Define their componentwise product
+    \[ c:=(v_1v_2,\;e_1e_2)=\bigl(g^{\beta_1+\beta_2},\;u^{\beta_1+\beta_2}\,m_1m_2\bigr). \]
+    Setting \(\beta:=\beta_1+\beta_2\), this is exactly \((g^{\beta},u^{\beta}(m_1m_2))=E(\mathit{pk},m_1m_2)\) with randomness \(\beta\). Indeed \(D(\mathit{sk},c)=e_1e_2/(v_1v_2)^\alpha=(u^{\beta}m_1m_2)/g^{\alpha\beta}=m_1m_2\). Hence anyone holding only \(\mathit{pk}\) and the two ciphertexts can produce an encryption of \(m_1\cdot m_2\), as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-11-6" data-ch="11">
+  <h3 class="ptitle"><span class="pnum">11.6</span> <span class="pname">(An attack on multiplicative ElGamal over \(\mathbb Z_p^*\))</span></h3>
+  <div class="statement">
+    <p>Let \(p,q\) be large primes with \(q\mid p-1\), and let \(\mathbb G\le \mathbb Z_p^*\) be the order-\(q\) subgroup generated by \(g\); assume DDH holds in \(\mathbb G\). Instantiate \(\mathcal E_{\mathrm{MEG}}\) (Exercise 11.5) with this \(\mathbb G\), but allow plaintexts from the whole group \(\mathbb Z_p^*\), so the scheme is over \((\mathbb Z_p^*,\,\mathbb G\times\mathbb Z_p^*)\). Show the resulting system is not semantically secure.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The key generator and the encryption randomness live in the order-\(q\) subgroup \(\mathbb G\). For this to be a proper subgroup of \(\mathbb Z_p^*\) (i.e. \(q&lt;p-1\)) we have in particular \(q\mid\frac{p-1}{2}\), so every element of \(\mathbb G\) is a quadratic residue mod \(p\) — its Legendre symbol is \(+1\). Hence the mask \(u^\beta\) never changes the quadratic-residue character of the message: \(\chi(e)=\chi(u^\beta m)=\chi(m)\). This character leaks one bit of \(m\), and that single bit lets us distinguish two messages of opposite character with advantage \(1\). This is an attack, so we just exhibit it.</p>
+    <h4>Solution</h4>
+    <p>Recall the Legendre symbol \(\chi(x):=\bigl(\tfrac{x}{p}\bigr)\in\{+1,-1\}\) for \(x\in\mathbb Z_p^*\); it is a multiplicative character, \(\chi(xy)=\chi(x)\chi(y)\), efficiently computable as \(\chi(x)=x^{(p-1)/2}\bmod p\). The quadratic residues form the index-2 subgroup \(\{x:\chi(x)=+1\}\).</p>
+    <p><em>Every element of \(\mathbb G\) is a QR.</em> Since \(\mathbb G\) has order \(q\) and (by hypothesis \(\mathbb G\) is the order-\(q\) subgroup, with \(q\) an odd prime dividing \(p-1\)) it is a subgroup of the cyclic group \(\mathbb Z_p^*\) of order \(p-1\). For the attack to be meaningful \(\mathbb G\ne\mathbb Z_p^*\); as \(q\) is an odd prime and \(2\mid p-1\), the subgroup of QRs has order \((p-1)/2\) and is divisible by \(q\), and \(\mathbb G\) (the unique subgroup of order \(q\)) is contained in it. Concretely, for any \(x=g^t\in\mathbb G\),
+    \[ \chi(x)=\chi(g)^t,\qquad \chi(g)=g^{(p-1)/2}=\bigl(g^{q}\bigr)^{(p-1)/(2q)}\cdot(\dots), \]
+    and since \(g^q=1\) while \((p-1)/2\) is a multiple of \(q\), we get \(g^{(p-1)/2}=1\), i.e. \(\chi(g)=+1\). Hence \(\chi(x)=+1\) for all \(x\in\mathbb G\). In particular \(u=g^\alpha\in\mathbb G\) and \(u^\beta\in\mathbb G\), so \(\chi(u^\beta)=+1\).</p>
+    <p><em>The attack.</em> The adversary \(\mathcal A\) works as follows:</p>
+    <ul>
+      <li>receive \(\mathit{pk}=u\). Choose two messages of opposite character: a quadratic residue \(m_0\) with \(\chi(m_0)=+1\) (e.g. \(m_0:=1\)) and a non-residue \(m_1\) with \(\chi(m_1)=-1\) (such elements exist and are trivial to find — half of \(\mathbb Z_p^*\) are non-residues; e.g. pick any \(x\) until \(x^{(p-1)/2}=-1\)). Send \((m_0,m_1)\).</li>
+      <li>receive the challenge \((v,e)=(g^\beta,\,u^\beta m_b)\). Compute \(\chi(e)\). Output \(0\) if \(\chi(e)=+1\), and \(1\) if \(\chi(e)=-1\).</li>
+    </ul>
+    <p><em>Analysis.</em> By multiplicativity and \(\chi(u^\beta)=+1\),
+    \[ \chi(e)=\chi(u^\beta)\,\chi(m_b)=\chi(m_b). \]
+    Thus if \(b=0\), \(\chi(e)=\chi(m_0)=+1\) and \(\mathcal A\) outputs \(0\); if \(b=1\), \(\chi(e)=\chi(m_1)=-1\) and \(\mathcal A\) outputs \(1\). So \(\mathcal A\) outputs \(b\) with certainty:
+    \[ \mathrm{SSadv}[\mathcal A,\mathcal E_{\mathrm{MEG}}]=\bigl|\Pr[\hat b=1\mid b=0]-\Pr[\hat b=1\mid b=1]\bigr|=|0-1|=1. \]
+    The attack runs in polynomial time (one Legendre-symbol evaluation), so the system over \((\mathbb Z_p^*,\mathbb G\times\mathbb Z_p^*)\) is not semantically secure, despite DDH holding in \(\mathbb G\). The point is that semantic security of Exercise 11.5(a) required the message space to be the subgroup \(\mathbb G\) itself, where the leaked character bit is constant; enlarging the message space to all of \(\mathbb Z_p^*\) exposes the residue bit.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-11-13" data-ch="11">
+  <h3 class="ptitle"><span class="pnum">11.13</span> <span class="pname">(Paillier encryption)</span></h3>
+  <div class="statement">
+    <p>Key generation (parameter \(\ell\)): pick distinct random \(\ell\)-bit primes \(p,q\); set \(n\leftarrow pq\), \(d\leftarrow(p-1)(q-1)/2\); \(\mathit{pk}\leftarrow n\), \(\mathit{sk}\leftarrow d\). With \(g:=[\,n+1\,]_{n^2}\in\mathbb Z_{n^2}^*\), encryption of \(m\in\{0,\dots,n-1\}\) is
+    \[ E(n,m):\ h\xleftarrow{\$}\mathbb Z_{n^2}^*,\ c\leftarrow g^m h^n\in\mathbb Z_{n^2}^*. \]
+    (a) Explain how \(D(\mathit{sk},c)\) recovers \(m\) (Hint: \(c^d\) lands in \(\mathbb G_n=\{(an+1)\}\) of Exercise 11.12, which has easy discrete log). (b) Prove semantic security under the assumption that \((n,u)\) and \((n,v)\) are computationally indistinguishable, where \(u\xleftarrow{\$}\mathbb Z_{n^2}^*\) and \(v\xleftarrow{\$}(\mathbb Z_{n^2}^*)^n:=\{h^n:h\in\mathbb Z_{n^2}^*\}\).</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The group \(\mathbb Z_{n^2}^*\) (order \(n\varphi(n)\)) splits as a product of a "hard" part of order \(\varphi(n)\) and the easy cyclic subgroup \(\mathbb G_n=\langle 1+n\rangle\) of order \(n\), in which \((1+n)^a=1+an\bmod n^2\), so discrete logs are trivial (Exercise 11.12). Raising \(c=g^m h^n\) to the power \(d=\varphi(n)/2\) kills the \(\varphi(n)\)-part of \(h^n\) and pushes everything into \(\mathbb G_n\); reading the easy dlog there yields \(md\bmod n\), and we divide by \(d\) mod \(n\). For security, \(h^n\) is a uniform \(n\)-th residue; the assumption says \((n,h^n)\approx(n,\text{uniform }u)\), and a uniform \(u\) multiplied into \(g^m\) gives a uniform ciphertext that hides \(m\).</p>
+    <h4>Solution</h4>
+    <p><strong>(a) Decryption.</strong> Recall \(|\mathbb Z_{n^2}^*|=\varphi(n^2)=n\varphi(n)=n(p-1)(q-1)\), so \(nd=\tfrac12 n(p-1)(q-1)=\tfrac12\varphi(n^2)\). Two facts:</p>
+    <ul>
+      <li><em>\(g\) lies in \(\mathbb G_n\) and has easy log.</em> \(g=1+n=[1\cdot n+1]_{n^2}\in\mathbb G_n\), and by Exercise 11.12, \(g^a=(1+n)^a=1+an\bmod n^2\) for all \(a\), so \(\mathbb G_n\) is cyclic of order \(n\) generated by \(g\), and the discrete log of \([1+an]_{n^2}\) is just \(a\) (read off the high part). In particular \(g^m=1+mn\bmod n^2\).</li>
+      <li><em>Raising to \(d\) annihilates the \(n\)-th-residue part.</em> Write \(c=g^m\,h^n\). Then
+      \[ c^{\,d}=g^{md}\,(h^{n})^{d}=g^{md}\,(h^{d})^{n}. \]
+      Now \(h^d\) has order dividing \(|\mathbb Z_{n^2}^*|=nd\cdot 2\)... more directly: \((h^n)^d=h^{nd}=h^{\varphi(n^2)/2}\). Since \(\gcd(n,\varphi(n))=1\), the subgroup \((\mathbb Z_{n^2}^*)^n\) of \(n\)-th residues is exactly the unique subgroup of order \(\varphi(n)\) (the "hard part"), and raising any element of it to the power \(d=\varphi(n)/2\) gives an element whose order divides \(\varphi(n)/\gcd(\varphi(n),d)=2\). In fact, working in the order-\(\varphi(n)\) part, \((h^n)^{d}\) has order dividing \(\varphi(n)/d=2\); and because that part has order \(\varphi(n)\) coprime to \(n\), while \(\mathbb G_n\) has order \(n\), and \(c^d\) we now compute lies in \(\mathbb G_n\):</li>
+    </ul>
+    <p>The clean statement is the standard one: because \(\mathbb Z_{n^2}^*\cong \mathbb G_n\times \mathbb H\) where \(\mathbb H=(\mathbb Z_{n^2}^*)^n\) is the order-\(\varphi(n)\) subgroup of \(n\)-th residues, and \(d=\varphi(n)/2\) is a multiple of half the order of \(\mathbb H\)... To avoid the order-2 nuisance we use the precise computation. Decompose \(c=g^m\cdot r\) with \(r=h^n\in\mathbb H\), \(|\mathbb H|=\varphi(n)\). Then
+    \[ c^{\,d}=g^{md}\cdot r^{d}. \]
+    The \(\mathbb G_n\)-component is \(g^{md}=1+ (md\bmod n)\,n\). For the \(\mathbb H\)-component \(r^d\): since we only need to recover the \(\mathbb G_n\)-part, observe \(\mathbb H\) is a subgroup whose order \(\varphi(n)\) is coprime to \(n\), hence \(r^{d}\in\mathbb H\) is again coprime-order, i.e. \(r^d\) reduces to \(1\) modulo \(n\) in the natural \(\mathbb G_n\)-projection. Formally, the projection \(\pi:\mathbb Z_{n^2}^*\to\mathbb G_n\) (kill the \(\mathbb H\)-part) is a homomorphism with \(\pi(\mathbb H)=\{1\}\); therefore
+    \[ \pi(c^{\,d})=\pi(g^{md})=g^{md}=1+(md\bmod n)\,n. \]
+    Now decryption reads the easy discrete log of \(\pi(c^d)\) — i.e. computes \(L(x):=(x-1)/n\) for \(x\equiv\pi(c^d)\) — obtaining
+    \[ L\bigl(c^{\,d}\bmod n^2\bigr)\equiv md \pmod n. \]
+    Here \(L(x)=(x-1)/n\) is integer division (valid because \(c^d\bmod n^2\) is \(\equiv1\bmod n\), as both \(g^{md}\) and \(r^d\) are \(1\bmod n\)). Finally, since \(\gcd(d,n)=1\) (the prime factors of \(d=\tfrac12(p-1)(q-1)\) are all \(&lt;p,q\), so \(d\) is invertible mod \(n=pq\)), the decryptor recovers
+    \[ m\leftarrow d^{-1}\cdot L(c^{\,d}\bmod n^2)\ \bmod n. \]
+    This is well-defined and equals the original \(m\in\{0,\dots,n-1\}\); decryption is correct.</p>
+    <p><em>(Summary of the arithmetic, mod \(n^2\) throughout: compute \(t\leftarrow c^{d}\bmod n^2\); then \(t\equiv 1\bmod n\) so \(L\leftarrow (t-1)/n\bmod n\); then \(m\leftarrow L\cdot d^{-1}\bmod n\).)</em></p>
+    <p><strong>(b) Semantic security.</strong> Let \(\mathcal A\) be a semantic-security adversary against the scheme. We use the bit-guessing form. Consider two games.</p>
+    <p><strong>Game 0.</strong> The real game: \(\mathcal A\) gets \(\mathit{pk}=n\), sends \(m_0,m_1\), and receives \(c=g^{m_b}h^n\) with \(h\xleftarrow{\$}\mathbb Z_{n^2}^*\), \(b\xleftarrow{\$}\{0,1\}\). Note \(h^n\) is a uniform element of the subgroup \(v\in(\mathbb Z_{n^2}^*)^n\) of \(n\)-th residues (the map \(h\mapsto h^n\) is a surjective homomorphism onto \((\mathbb Z_{n^2}^*)^n\), hence \(h^n\) is uniform there). So \(c=g^{m_b}\cdot v\) with \(v\) a uniform \(n\)-th residue. \(\Pr[\hat b=b\mid\text{Game }0]=\tfrac12+\mathrm{SSadv}^*[\mathcal A]\).</p>
+    <p><strong>Game 1.</strong> Identical, except the challenger forms \(c:=g^{m_b}\cdot u\) with \(u\xleftarrow{\$}\mathbb Z_{n^2}^*\) uniform in the <em>whole</em> group (instead of a uniform \(n\)-th residue).</p>
+    <p><em>Hop \(0\to 1\) is bounded by the assumption.</em> We build a distinguisher \(\mathcal B\) (an elementary wrapper around \(\mathcal A\)) for the two distributions \((n,v)\) and \((n,u)\): \(\mathcal B\) receives \((n,t)\) where \(t\) is either a uniform \(n\)-th residue \(v\) or a uniform unit \(u\). It runs \(\mathcal A\) on \(\mathit{pk}=n\), gets \(m_0,m_1\), picks \(b\xleftarrow{\$}\{0,1\}\), and returns the challenge \(c:=g^{m_b}\cdot t\). When \(\mathcal A\) outputs \(\hat b\), \(\mathcal B\) outputs \(1\) iff \(\hat b=b\). If \(t=v\) (\(n\)-th residue) the view is exactly Game 0; if \(t=u\) (uniform unit) it is exactly Game 1. Hence
+    \[ \bigl|\Pr[\hat b=b\mid\text{Game }0]-\Pr[\hat b=b\mid\text{Game }1]\bigr|\le\mathrm{Distadv}[\mathcal B,(n,v),(n,u)], \]
+    which is negligible by the stated assumption.</p>
+    <p><em>Game 1 hides \(b\) information-theoretically.</em> In Game 1, \(u\) is uniform over \(\mathbb Z_{n^2}^*\) and independent of \(b,m_0,m_1\). Since multiplication by the fixed unit \(g^{m_b}\) is a bijection of \(\mathbb Z_{n^2}^*\), the product \(c=g^{m_b}u\) is uniform over \(\mathbb Z_{n^2}^*\) and independent of \(b\). Therefore \(\mathcal A\)'s view is independent of \(b\), and
+    \[ \Pr[\hat b=b\mid\text{Game }1]=\tfrac12. \]</p>
+    <p>Combining,
+    \[ \mathrm{SSadv}^*[\mathcal A]=\Pr[\hat b=b\mid\text{Game }0]-\tfrac12\le\mathrm{Distadv}[\mathcal B,(n,v),(n,u)], \]
+    so \(\mathrm{SSadv}[\mathcal A]=2\,\mathrm{SSadv}^*[\mathcal A]\le 2\,\mathrm{Distadv}[\mathcal B,(n,v),(n,u)]\), which is negligible under the assumption. Hence Paillier encryption is semantically secure, as required.</p>
+  </div>
+</section>

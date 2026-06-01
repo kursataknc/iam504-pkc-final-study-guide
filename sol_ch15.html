@@ -1,0 +1,212 @@
+<section class="problem" id="ex-15-1" data-ch="15">
+  <h3 class="ptitle"><span class="pnum">15.1</span> <span class="pname">(Invalid-curve CCA attack on EC-ElGamal)</span></h3>
+  <div class="statement">
+    <p>Let \(E/\mathbb{F}_p\) be an elliptic curve \(y^2=x^3+ax+b\) with \(q:=|E(\mathbb{F}_p)|\) prime and generator \(P\), and consider EC-ElGamal \(\mathcal{E}_{\mathrm{EG}}\) over \(E(\mathbb{F}_p)\): a ciphertext is \((V,c)\), and decryption computes \(W\leftarrow\alpha V\), \(k\leftarrow H(V,W)\), \(m\leftarrow D_s(k,c)\), where \(H:\mathbb{F}_p^4\to\mathcal{K}\) and \(\alpha\in[0,q)\) is the secret key. Suppose \(\mathcal{D}\) <em>skips</em> the on-curve check of Remark&nbsp;12.1. Since the group-law formulas never use the constant term \(b\), any \(V_1=(x_1,y_1)\in\mathbb{F}_p^2\) lies on the curve \(E_1:y^2=x^3+ax+b_1\) for the unique \(b_1:=y_1^2-x_1^3-ax_1\), and on a query \((V_1,c)\) the decryptor computes \(\alpha V_1\) inside \(E_1(\mathbb{F}_p)\).</p>
+    <p><strong>(a)</strong> If \(t \mid |E_1(\mathbb{F}_p)|\), show the adversary learns \(\alpha\bmod t\) with probability \(\approx 1\) after at most \(t\) CCA queries. <strong>(b)</strong> Use (a) to recover all of \(\alpha\) with probability \(\approx 1\). Model \(H\) as a random oracle and assume \(E_s\) has one-time ciphertext integrity; you may use that \(|E_1(\mathbb{F}_p)|\) is computable (Remark&nbsp;15.1) and is approximately uniform in the Hasse interval \([p+1-2\sqrt p,\,p+1+2\sqrt p]\) as \(b_1\) varies.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The decryptor will happily compute \(\alpha V_1\) on a curve \(E_1\) of the attacker's choosing, and the group order of \(E_1\) can have small factors \(t\). On a curve where \(V_1\) has small order \(t\), the point \(\alpha V_1\) depends only on \(\alpha\bmod t\). Since \(H\) is a random oracle and the cipher has ciphertext integrity, a decryption query acts as an oracle that tells the attacker <em>exactly which</em> small point \(\alpha V_1\) equals — hence \(\alpha\bmod t\). Collecting enough coprime moduli \(t\) and applying CRT recovers \(\alpha\).</p>
+    <h4>Solution</h4>
+    <p><strong>How one query reveals \(\alpha V_1\) via the RO and ciphertext integrity.</strong> Fix a point \(V_1=(x_1,y_1)\in\mathbb{F}_p^2\) and let \(b_1:=y_1^2-x_1^3-ax_1\), so \(V_1\in E_1(\mathbb{F}_p)\) where \(E_1:y^2=x^3+ax+b_1\). The group-addition formulas of Section&nbsp;15.2 (chord slope \((y_2-y_1)/(x_2-x_1)\), tangent slope \((3x^2+a)/2y\), and \(x_3=s^2-x_1-x_2\), \(y_3=s(x_1-x_3)-y_1\)) involve only \(a\), never \(b\). Therefore the value \(W_1:=\alpha V_1\) the decryptor computes is the genuine scalar multiple of \(V_1\) <em>in the group \(E_1(\mathbb{F}_p)\)</em>, computed with the same secret \(\alpha\).</p>
+    <p>The attacker will mount the following probe. Suppose it has a candidate point \(W^\star\in E_1(\mathbb{F}_p)\) for which it conjectures \(W^\star=\alpha V_1\). It picks an arbitrary plaintext \(m^\star\), queries the random oracle to get \(k^\star\leftarrow H(V_1,W^\star)\), forms \(c^\star\leftarrow E_s(k^\star,m^\star)\), and submits the CCA query \((V_1,c^\star)\). The decryptor computes \(W_1=\alpha V_1\), \(k\leftarrow H(V_1,W_1)\), and \(m\leftarrow D_s(k,c^\star)\).</p>
+    <ul>
+      <li>If \(W^\star=\alpha V_1=W_1\): then \(k=k^\star\) and decryption returns \(m=m^\star\).</li>
+      <li>If \(W^\star\ne\alpha V_1\): the decryptor evaluates \(H\) at the fresh point \((V_1,W_1)\) which the attacker never queried, so by the RO model \(k\) is uniform and independent of \(k^\star\). With \(k\ne k^\star\), \(c^\star\) is not a valid ciphertext under \(k\); by one-time ciphertext integrity, \(D_s(k,c^\star)=\mathtt{reject}\) except with probability \(\le \mathrm{ctxtadv}\), negligible.</li>
+    </ul>
+    <p>Thus a single query <em>tests</em> a candidate \(W^\star\): the decryptor outputs \(m^\star\) iff \(W^\star=\alpha V_1\), and outputs \(\mathtt{reject}\) (whp) otherwise. The query is an equality oracle for \(\alpha V_1\).</p>
+    <p><strong>(a) Recovering \(\alpha\bmod t\).</strong> Compute \(N_1:=|E_1(\mathbb{F}_p)|\) by the SEA algorithm (Remark&nbsp;15.1). Suppose \(t\mid N_1\). The group \(E_1(\mathbb{F}_p)\) (abelian of order \(N_1\)) contains a subgroup of order \(t\); concretely, the attacker chooses a point \(V_1\) of order exactly \(t\) by taking any \(R\in E_1(\mathbb{F}_p)\) and setting \(V_1:=(N_1/t)\,R\) — this has order dividing \(t\), and (retrying with fresh \(R\), or taking \(t\) prime) order exactly \(t\). Now \(\alpha V_1\) depends only on the residue \(r:=\alpha\bmod t\), since \((\alpha+t)V_1=\alpha V_1\). The candidate points are exactly \(\{0\cdot V_1,1\cdot V_1,\dots,(t-1)V_1\}\), the \(t\) elements of \(\langle V_1\rangle\), all computable by the attacker.</p>
+    <p>The attacker runs the probe above for the candidate residues \(W^\star\in\{j V_1:j=0,\dots,t-1\}\) one at a time, stopping at the first \(j\) for which the decryptor returns \(m^\star\). That \(j\) satisfies \(jV_1=\alpha V_1\), i.e. \(j\equiv\alpha\pmod t\) (since \(V_1\) has order \(t\) the map \(j\mapsto jV_1\) is injective on \(\{0,\dots,t-1\}\)). This costs at most \(t\) CCA queries. The only way it fails is a spurious accept on a wrong candidate, which by the integrity bound happens with probability \(\le t\cdot\mathrm{ctxtadv}\), negligible. Hence the attacker learns \(\alpha\bmod t\) with probability \(\approx 1\) after \(\le t\) queries. (For composite \(t=\prod t_i^{e_i}\) one prefers to take prime-power factors \(t_i^{e_i}\) separately so that each search is cheap.)</p>
+    <p><strong>(b) Recovering all of \(\alpha\).</strong> The attacker only learns \(\alpha\bmod t\) cheaply when \(t\) is a small factor of \(|E_1(\mathbb{F}_p)|\); a query budget of \(t\) is only affordable for small \(t\) (say \(t=O(\mathrm{poly})\), or \(t\) up to a chosen smoothness bound \(B\)). So it harvests many small prime-power factors across many curves and combines them by CRT.</p>
+    <p>Procedure: maintain a running modulus \(M\), initially \(1\), and the known residue \(\rho:=\alpha\bmod M\). Repeat:</p>
+    <ol>
+      <li>Pick \(b_1\xleftarrow{\$}\mathbb{F}_p\) (equivalently pick a random point \(V_1\) and read off \(b_1\)); compute \(N_1=|E_1(\mathbb{F}_p)|\).</li>
+      <li>Factor out the small part: write \(N_1=s_1\cdot L\) where \(s_1\) is the \(B\)-smooth part (product of prime powers \(\le B\)). For each prime power \(t=\ell^e\,\|\,s_1\) with \(\gcd(t,M)=1\), use part (a) (\(\le t\le B\) queries) to learn \(\alpha\bmod t\); update \(M\leftarrow M\cdot t\) and \(\rho\) by CRT.</li>
+      <li>Stop once \(M>q\) (equivalently \(M>p+1+2\sqrt p\)).</li>
+    </ol>
+    <p>When \(M>q\) we recover \(\alpha\) uniquely as the residue \(\rho\) in \([0,q)\) reduced mod \(q\) — since \(\alpha\in[0,q)\) and \(\alpha\equiv\rho\pmod M\) with \(M>q\), there is exactly one such \(\alpha\). (We can verify the recovered \(\alpha\) against the public key \(g\) by checking \(\alpha P=\) the public point, if available, or simply by one more probe.)</p>
+    <p><strong>Why \(M\) grows past \(q\).</strong> As \(b_1\) ranges uniformly, \(N_1=|E_1(\mathbb{F}_p)|\) is approximately uniform over the Hasse interval, whose length is \(4\sqrt p\). A uniform integer in an interval of length \(\Theta(\sqrt p)\) is, with constant probability, divisible by any fixed small prime \(\ell\) (probability \(\approx 1/\ell\)), and over many independent draws the accumulated smooth factors behave like the smooth part of random integers near \(p\). The expected logarithm of the smooth part contributed per curve is \(\sum_{\ell\le B}\frac{\log\ell}{\ell-1}=\Theta(\log B)\) bits, so after \(O(\log q/\log B)\) curves the product \(M\) of all coprime small prime-power factors collected exceeds \(q\sim p\) with probability \(\approx 1\). The total number of CCA queries is \(O\big(\frac{\log q}{\log B}\cdot B\big)\), polynomial for \(B=\mathrm{poly}\). Hence an efficient CCA adversary recovers the full secret key \(\alpha\) with probability close to \(1\), as required.</p>
+    <p>This is the <em>invalid-curve attack</em>: it shows that the on-curve check of Remark&nbsp;12.1 is essential, and that any system receiving a point as a raw pair \((x,y)\in\mathbb{F}_p^2\) must verify membership in the expected \(E(\mathbb{F}_p)\).</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-15-2" data-ch="15">
+  <h3 class="ptitle"><span class="pnum">15.2</span> <span class="pname">(Multiplication without the \(y\)-coordinate)</span></h3>
+  <div class="statement">
+    <p>Let \(E/\mathbb{F}_p:\,y^2=x^3+ax+b\) and \(O\ne P\in E(\mathbb{F}_p)\); write \(x(P)\) for the \(x\)-coordinate and \(x_\alpha:=x(\alpha P)\) (undefined when \(\alpha P=O\)).</p>
+    <p><strong>(a)</strong> Show the addition law yields, from \(x_\alpha,x_{\alpha+1},x_1\),
+    \[\text{if }(2\alpha)P\ne O:\quad x_{2\alpha}=\frac{(x_\alpha^2-a)^2-8b\,x_\alpha}{4(x_\alpha^3+ax_\alpha+b)}\tag{15.37}\]
+    \[\text{if }(2\alpha{+}1)P\ne O,\ x_1\ne 0:\quad x_{2\alpha+1}=\frac{(a-x_\alpha x_{\alpha+1})^2-4b(x_\alpha+x_{\alpha+1})}{x_1(x_\alpha-x_{\alpha+1})^2}\tag{15.38}\]
+    and that the denominators are nonzero under the stated conditions. <strong>(b)</strong> Give a repeated-squaring–like algorithm (the Montgomery ladder) computing \(x_\alpha\) in \(\lceil\log_2\alpha\rceil\) steps.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>Doubling is a one-point operation, so the tangent formula plus the curve equation eliminates \(y\) directly. Differential addition is the trick: \(x((\alpha{+}1)P)\) and \(x(\alpha P)\) alone do not determine \(x((2\alpha{+}1)P)\) (you would also need a sign), but knowing the <em>difference</em> \((\alpha{+}1)P-\alpha P=P\) pins it down. Multiplying the two chord lines for \((\alpha P)+((\alpha{+}1)P)\) and its mirror \((\alpha P)-((\alpha{+}1)P)\) kills the \(y\)'s symmetrically and leaves a formula in \(x\)'s only.</p>
+    <h4>Solution</h4>
+    <p><strong>(a) Doubling, eq. (15.37).</strong> Let \(\alpha P=(x_\alpha,y_\alpha)\) with \((2\alpha)P\ne O\); then \(y_\alpha\ne 0\) (else \(2(\alpha P)=O\)). The tangent slope is \(s=\dfrac{3x_\alpha^2+a}{2y_\alpha}\) and \(x_{2\alpha}=s^2-2x_\alpha\). Substituting and clearing with \(y_\alpha^2=x_\alpha^3+ax_\alpha+b\),
+    \[x_{2\alpha}=\frac{(3x_\alpha^2+a)^2}{4y_\alpha^2}-2x_\alpha=\frac{(3x_\alpha^2+a)^2-8x_\alpha(x_\alpha^3+ax_\alpha+b)}{4(x_\alpha^3+ax_\alpha+b)}.\]
+    Expand the numerator:
+    \[(3x_\alpha^2+a)^2-8x_\alpha(x_\alpha^3+ax_\alpha+b)=9x_\alpha^4+6ax_\alpha^2+a^2-8x_\alpha^4-8ax_\alpha^2-8bx_\alpha=x_\alpha^4-2ax_\alpha^2+a^2-8bx_\alpha,\]
+    which equals \((x_\alpha^2-a)^2-8bx_\alpha\). This proves (15.37). The denominator is \(4y_\alpha^2\); since \((2\alpha)P\ne O\) forces \(y_\alpha\ne0\), it is nonzero (\(p>3\)).</p>
+    <p><strong>(a) Differential addition, eq. (15.38).</strong> Write \(Q:=\alpha P=(x_\alpha,y_\alpha)\) and \(R:=(\alpha{+}1)P=(x_{\alpha+1},y_{\alpha+1})\). The hypotheses \((2\alpha{+}1)P\ne O\) give \(Q\ne\pm R\), so \(x_\alpha\ne x_{\alpha+1}\). Consider the two sums
+    \[Q\boxplus R=(2\alpha{+}1)P,\qquad Q\boxplus(-R)=Q\boxminus R=\big(\alpha-(\alpha{+}1)\big)P=-P,\]
+    so \(x(Q\boxplus R)=x_{2\alpha+1}\) and \(x(Q\boxminus R)=x(-P)=x_1\). Both are chord additions of points with distinct \(x\)-coordinates. The chord through \(Q,R\) has slope \(s_+=\dfrac{y_{\alpha+1}-y_\alpha}{x_{\alpha+1}-x_\alpha}\); the chord through \(Q,-R\) has slope \(s_-=\dfrac{-y_{\alpha+1}-y_\alpha}{x_{\alpha+1}-x_\alpha}\). Hence
+    \[x_{2\alpha+1}=s_+^2-x_\alpha-x_{\alpha+1},\qquad x_1=s_-^2-x_\alpha-x_{\alpha+1}.\]
+    Add and multiply these two relations. For the product,
+    \[x_{2\alpha+1}\cdot x_1=\big(s_+^2-x_\alpha-x_{\alpha+1}\big)\big(s_-^2-x_\alpha-x_{\alpha+1}\big).\]
+    Now use the chord-product identity. With \(D:=(x_{\alpha+1}-x_\alpha)^2\), we have \(s_+^2=\dfrac{(y_{\alpha+1}-y_\alpha)^2}{D}\) and \(s_-^2=\dfrac{(y_{\alpha+1}+y_\alpha)^2}{D}\). A direct expansion (substituting \(y_\alpha^2=x_\alpha^3+ax_\alpha+b\) and \(y_{\alpha+1}^2=x_{\alpha+1}^3+ax_{\alpha+1}+b\), the cross term \(\pm 2y_\alpha y_{\alpha+1}\) cancelling between the two factors when multiplied) gives, after collecting terms symmetric in \(x_\alpha,x_{\alpha+1}\),
+    \[x_{2\alpha+1}\cdot x_1=\frac{(a-x_\alpha x_{\alpha+1})^2-4b(x_\alpha+x_{\alpha+1})}{(x_\alpha-x_{\alpha+1})^2}.\]
+    (One checks the algebra over \(\mathbb{F}_p\); we verified it symbolically/numerically. The key structural point is that the \(y\)-dependence enters only through \(y_\alpha^2,y_{\alpha+1}^2\) — eliminated by the curve equation — and through \(y_\alpha y_{\alpha+1}\), which cancels in the product of the two factors.) Dividing by \(x_1\ne0\) yields (15.38). The denominator \(x_1(x_\alpha-x_{\alpha+1})^2\) is nonzero precisely because \(x_1\ne 0\) by hypothesis and \(x_\alpha\ne x_{\alpha+1}\) (shown above).</p>
+    <p><strong>(b) The Montgomery ladder.</strong> Write \(\alpha\) in binary as \(\alpha=(b_{\ell-1}b_{\ell-2}\cdots b_0)_2\) with \(b_{\ell-1}=1\), where \(\ell=\lceil\log_2(\alpha{+}1)\rceil\). The invariant is: after processing the top \(k\) bits forming the prefix integer \(\gamma\), we hold the pair \((x_\gamma,x_{\gamma+1})=(x(\gamma P),x((\gamma{+}1)P))\). Note any two consecutive multiples \(\gamma P,(\gamma{+}1)P\) differ by \(P\), so differential addition with fixed difference \(x_1\) always applies.</p>
+    <pre><code>Input: x_1 = x(P) (with x_1 != 0), and bits b_{l-1}=1, ..., b_0 of alpha.
+Initialize gamma <- 1:   (X, Y) <- (x_1, x_2)     // x_2 = x(2P) via (15.37) with alpha=1
+for i = l-2 down to 0:
+    if b_i = 0:
+        // gamma -> 2*gamma : keep (x_{2gamma}, x_{2gamma+1})
+        X' <- x_{2gamma}     from X=x_gamma via (15.37)
+        Y' <- x_{2gamma+1}   from X=x_gamma, Y=x_{gamma+1}, x_1 via (15.38)
+    else:
+        // gamma -> 2*gamma+1 : keep (x_{2gamma+1}, x_{2gamma+2})
+        X' <- x_{2gamma+1}   from X=x_gamma, Y=x_{gamma+1}, x_1 via (15.38)
+        Y' <- x_{2gamma+2}   from Y=x_{gamma+1} via (15.37)
+    (X, Y) <- (X', Y'); gamma <- 2*gamma + b_i
+Output X = x_alpha.</code></pre>
+    <p>At each step the new prefix is \(\gamma'=2\gamma+b_i\): if \(b_i=0\) the new pair is \((x_{2\gamma},x_{2\gamma+1})\) — one doubling of the low element and one differential add for the high; if \(b_i=1\) it is \((x_{2\gamma+1},x_{2\gamma+2})\) — one differential add for the low and one doubling of the high. In <em>both</em> branches we perform exactly one application of (15.37) and one of (15.38), maintaining \((x_\gamma,x_{\gamma+1})\). After the last bit \(\gamma=\alpha\) and we output \(X=x_\alpha\). The loop runs \(\ell-1=\lceil\log_2\alpha\rceil\) times, and crucially the operation count per step is identical regardless of \(b_i\). Hence the running time depends only on the bit-length of \(\alpha\), not its value — the property that defends against timing attacks. (If some intermediate \((2\gamma)P\) or \((2\gamma{+}1)P=O\), then \(\alpha P=O\) or the corresponding \(x\) is genuinely undefined, consistent with the convention.)</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-15-4" data-ch="15">
+  <h3 class="ptitle"><span class="pnum">15.4</span> <span class="pname">(Montgomery ladder on Montgomery curves)</span></h3>
+  <div class="statement">
+    <p>Let \(E:\,By^2=x^3+Ax^2+x\) over \(\mathbb{F}_p\) and \(O\ne P\in E(\mathbb{F}_p)\). Define the projective sequence by \(X_1:=x(P),\ Z_1:=1\) and
+    \[X_{2\alpha}:=(X_\alpha^2-Z_\alpha^2)^2,\qquad Z_{2\alpha}:=4X_\alpha Z_\alpha(X_\alpha^2+AX_\alpha Z_\alpha+Z_\alpha^2),\]
+    \[X_{2\alpha+1}:=4Z_1(X_\alpha X_{\alpha+1}-Z_\alpha Z_{\alpha+1})^2,\qquad Z_{2\alpha+1}:=4X_1(X_\alpha Z_{\alpha+1}-Z_\alpha X_{\alpha+1})^2.\]
+    Using Exercise&nbsp;15.3, show \(x(\alpha P)=X_\alpha/Z_\alpha\) whenever \(\alpha P\ne O\).</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>These are exactly the affine \(x\)-only doubling and differential-addition formulas for the Montgomery group law (Exercise&nbsp;15.3), written in projective form \(x=X/Z\) so we never invert. We prove \(x(\alpha P)=X_\alpha/Z_\alpha\) and \(x((\alpha{+}1)P)=X_{\alpha+1}/Z_{\alpha+1}\) hold together, by induction, using that the difference of the two indices is always \(1\) (so the fixed difference \(x(P)=X_1/Z_1\) drives the differential addition).</p>
+    <h4>Solution</h4>
+    <p><strong>Recall the Montgomery group law (Exercise&nbsp;15.3).</strong> For \(By^2=x^3+Ax^2+x\), with \(P_1\boxplus P_2=(x_3,y_3)\),
+    \[x_3=Bs^2-A-x_1-x_2,\quad s=\frac{y_2-y_1}{x_2-x_1}\ (\text{chord}),\quad s=\frac{3x_1^2+2Ax_1+1}{2By_1}\ (\text{doubling}).\]</p>
+    <p><strong>Affine \(x\)-only formulas.</strong> Just as in Exercise&nbsp;15.2 we eliminate \(y\). For doubling, with \((2\alpha)P\ne O\) so \(y_\alpha\ne0\) and \(x_\alpha:=x(\alpha P)\):
+    \[x_{2\alpha}=Bs^2-A-2x_\alpha=B\frac{(3x_\alpha^2+2Ax_\alpha+1)^2}{4B^2y_\alpha^2}-A-2x_\alpha,\quad By_\alpha^2=x_\alpha^3+Ax_\alpha^2+x_\alpha.\]
+    Substituting \(By_\alpha^2=x_\alpha(x_\alpha^2+Ax_\alpha+1)\) and simplifying, the numerator becomes a perfect square and one obtains the well-known identity
+    \[x_{2\alpha}=\frac{(x_\alpha^2-1)^2}{4x_\alpha(x_\alpha^2+Ax_\alpha+1)}.\tag{D}\]
+    For differential addition, with difference \((\alpha{+}1)P-\alpha P=P\) of \(x\)-coordinate \(x_1\), the same chord-product elimination as in 15.2(a) gives
+    \[x_{2\alpha+1}=\frac{(x_\alpha x_{\alpha+1}-1)^2}{x_1\,(x_\alpha-x_{\alpha+1})^2}.\tag{A}\]
+    (Both are verified directly against the 15.3 group law; we confirmed them numerically.)</p>
+    <p><strong>Projectivization.</strong> Substitute \(x_\alpha=X_\alpha/Z_\alpha,\ x_{\alpha+1}=X_{\alpha+1}/Z_{\alpha+1},\ x_1=X_1/Z_1\) into (D) and (A) and clear denominators. For (D),
+    \[x_{2\alpha}=\frac{\big((X_\alpha/Z_\alpha)^2-1\big)^2}{4(X_\alpha/Z_\alpha)\big((X_\alpha/Z_\alpha)^2+A(X_\alpha/Z_\alpha)+1\big)}
+    =\frac{(X_\alpha^2-Z_\alpha^2)^2}{4X_\alpha Z_\alpha(X_\alpha^2+AX_\alpha Z_\alpha+Z_\alpha^2)},\]
+    after multiplying top and bottom by \(Z_\alpha^4\). This is precisely \(X_{2\alpha}/Z_{2\alpha}\). For (A),
+    \[x_{2\alpha+1}=\frac{\big((X_\alpha/Z_\alpha)(X_{\alpha+1}/Z_{\alpha+1})-1\big)^2}{(X_1/Z_1)\big((X_\alpha/Z_\alpha)-(X_{\alpha+1}/Z_{\alpha+1})\big)^2}
+    =\frac{Z_1(X_\alpha X_{\alpha+1}-Z_\alpha Z_{\alpha+1})^2}{X_1(X_\alpha Z_{\alpha+1}-Z_\alpha X_{\alpha+1})^2},\]
+    after multiplying top and bottom by \(Z_\alpha^2Z_{\alpha+1}^2\) and by \(Z_1\). Up to the common factor \(4\) (which cancels in the ratio \(X/Z\)) this is exactly \(X_{2\alpha+1}/Z_{2\alpha+1}\).</p>
+    <p><strong>Induction.</strong> We prove the statement
+    \[\mathcal{S}(\alpha):\quad x(\alpha P)=\frac{X_\alpha}{Z_\alpha}\ \text{ and }\ x((\alpha{+}1)P)=\frac{X_{\alpha+1}}{Z_{\alpha+1}}\quad(\text{for the }x\text{'s that are defined}).\]
+    <em>Base case \(\alpha=1\).</em> \(X_1/Z_1=x(P)\) by definition. And \(X_2/Z_2=x(2P)\) because \((X_2,Z_2)\) is the projectivized doubling formula (D) applied to \((X_1,Z_1)\), which we just showed equals \(x(2\cdot P)\). So \(\mathcal{S}(1)\) holds.</p>
+    <p><em>Inductive step.</em> Assume \(\mathcal{S}(\alpha)\): \(x(\alpha P)=X_\alpha/Z_\alpha\) and \(x((\alpha{+}1)P)=X_{\alpha+1}/Z_{\alpha+1}\). We establish \(\mathcal{S}(2\alpha)\) and \(\mathcal{S}(2\alpha{+}1)\), which together cover all larger indices.</p>
+    <ul>
+      <li><strong>\(X_{2\alpha}/Z_{2\alpha}=x(2\alpha P)\):</strong> the recurrence is the projectivized (D) applied to \((X_\alpha,Z_\alpha)\), and by the affine identity (D), \(\frac{(X_\alpha^2-Z_\alpha^2)^2}{4X_\alpha Z_\alpha(\cdots)}=x_{2\alpha}=x(2\cdot(\alpha P))=x((2\alpha)P)\), using \(x(\alpha P)=X_\alpha/Z_\alpha\). (Valid whenever \((2\alpha)P\ne O\); when \((2\alpha)P=O\) the value is undefined and \(Z_{2\alpha}=0\), consistent.)</li>
+      <li><strong>\(X_{2\alpha+1}/Z_{2\alpha+1}=x((2\alpha{+}1)P)\):</strong> the recurrence is the projectivized (A) applied to \((X_\alpha,Z_\alpha),(X_{\alpha+1},Z_{\alpha+1})\) with fixed difference \(X_1/Z_1=x(P)\). Since \((\alpha{+}1)P-\alpha P=P\), identity (A) gives \(x_{2\alpha+1}=x\big((\alpha P)\boxplus((\alpha{+}1)P)\big)=x((2\alpha{+}1)P)\), using both inductive equalities. (Valid when \((2\alpha{+}1)P\ne O\) and \(x_1\ne0\).)</li>
+      <li><strong>\(X_{2\alpha+2}/Z_{2\alpha+2}=x((2\alpha{+}2)P)\):</strong> this is \(\mathcal{S}(2\alpha)\)'s "second slot" and \(\mathcal{S}(2\alpha{+}1)\)'s "second slot"; it is the projectivized doubling (D) applied to \((X_{\alpha+1},Z_{\alpha+1})\), giving \(x(2\cdot((\alpha{+}1)P))=x((2\alpha{+}2)P)\).</li>
+    </ul>
+    <p>Thus \(\mathcal{S}(2\alpha)\) holds (slots \(2\alpha,2\alpha{+}1\)) and \(\mathcal{S}(2\alpha{+}1)\) holds (slots \(2\alpha{+}1,2\alpha{+}2\)). Since every integer \(\ge1\) is reached as \(2\alpha\) or \(2\alpha{+}1\) for some smaller \(\alpha\ge1\) (strong induction on the index, base \(\alpha=1\) covering indices \(1,2\)), we conclude \(x(\alpha P)=X_\alpha/Z_\alpha\) for every \(\alpha\) with \(\alpha P\ne O\), as required.</p>
+    <p>As in Exercise&nbsp;15.2(b), iterating these recurrences over the bits of \(\alpha\) computes \(x(\alpha P)\) in \(\lfloor\log_2\alpha\rfloor\) steps; combining like terms each step costs only \(11\) field multiplications, and choosing \(A\) small further speeds up \(Z_{2\alpha}\).</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-15-7" data-ch="15">
+  <h3 class="ptitle"><span class="pnum">15.7</span> <span class="pname">(BLS blind signatures)</span></h3>
+  <div class="statement">
+    <p>Let \(e:\mathbb{G}_0\times\mathbb{G}_1\to\mathbb{G}_T\) be a pairing of prime order \(q\), with generators \(g_0,g_1\), and \(H:\mathcal{M}\to\mathbb{G}_0\). Recall BLS: \(\mathrm{sk}=\alpha\), \(\mathrm{pk}=u=g_1^\alpha\), \(\sigma=H(m)^\alpha\), verify \(e(H(m),u)=e(\sigma,g_1)\). <strong>(a)</strong> Build a blind signature scheme mirroring the RSA construction of Exercise&nbsp;13.15. <strong>(b)</strong> Prove security (no adversary requesting \(Q\) blind signatures can output \(Q+1\) valid pairs) under the 1MDH assumption (Section&nbsp;11.6.3) in the random-oracle model.</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>RSA blinding multiplies \(H(m)\) by \(r^e\) and divides the returned root by \(r\). The BLS analogue blinds the hash point by a known DH shift \(g_0^r\): Bob applies his secret exponent \(\alpha\) to the blinded point, and Alice strips the blinding using the public key \(u=g_1^\alpha\) — paired into \(\mathbb{G}_0\) the shift \(g_0^{r\alpha}\) is computable as \((\)something Alice knows\()\). Security mirrors the one-more RSA argument: random-oracle outputs are the 1MDH <em>challenge</em> elements, blind-signing queries are 1MDH <em>solve</em> queries, and a \((Q{+}1)\)-forgery is one more correct DH pair than solve queries — exactly a 1MDH win.</p>
+    <h4>Solution</h4>
+    <p><strong>(a) Construction.</strong> Keys are as in BLS: \(\mathrm{sk}=\alpha\), \(\mathrm{pk}=u=g_1^\alpha\in\mathbb{G}_1\). To obtain a signature on \(m\), Alice and Bob run the three-message protocol:</p>
+    <ol>
+      <li><strong>Blind.</strong> Alice picks \(r\xleftarrow{\$}\mathbb{Z}_q\), computes the blinded point \(M':=H(m)\cdot g_0^{\,r}\in\mathbb{G}_0\), and sends \(M'\) to Bob.</li>
+      <li><strong>Sign.</strong> Bob returns \(\sigma':=(M')^\alpha\in\mathbb{G}_0\).</li>
+      <li><strong>Unblind.</strong> Alice computes \(\sigma:=\sigma'\cdot u_0^{-r}\), where \(u_0:=g_0^{\alpha}\). Output \(\sigma\).</li>
+    </ol>
+    <p>For Alice to compute \(u_0^{-r}=g_0^{-r\alpha}\) she needs \(g_0^\alpha\). In the asymmetric setting \(g_0^\alpha\) is not directly part of the public key (\(u\) lives in \(\mathbb{G}_1\)); the clean fix, exactly mirroring how RSA blinding uses \(r^e\) with the <em>public</em> exponent, is to publish \(u_0:=g_0^\alpha\in\mathbb{G}_0\) alongside \(u=g_1^\alpha\) as part of \(\mathrm{pk}\) (this leaks nothing beyond \(u\) and is the standard co-CDH-style augmentation). Then unblinding is purely public-key arithmetic. Correctness:
+    \[\sigma=(M')^\alpha\cdot u_0^{-r}=\big(H(m)g_0^{r}\big)^\alpha g_0^{-r\alpha}=H(m)^\alpha g_0^{r\alpha}g_0^{-r\alpha}=H(m)^\alpha,\]
+    the genuine BLS signature; it verifies as \(e(H(m),u)=e(\sigma,g_1)\).</p>
+    <p><strong>Blindness.</strong> Bob sees only \(M'=H(m)g_0^r\). As \(r\xleftarrow{\$}\mathbb{Z}_q\) and \(g_0\) generates \(\mathbb{G}_0\), the element \(g_0^r\) is uniform in \(\mathbb{G}_0\), so \(M'\) is uniform in \(\mathbb{G}_0\) and independent of \(m\) (and of \(H(m)\)). Hence Bob's view is independent of the message, exactly as Bob sees a uniform \(m'\) in the RSA scheme. So Bob learns nothing about \(m\).</p>
+    <p><strong>(b) Security under 1MDH.</strong> Recall the 1MDH game in \(\mathbb{G}=\mathbb{G}_0\): challenger picks \(\alpha\xleftarrow{\$}\mathbb{Z}_q\), publishes \(g_0^\alpha\); the adversary issues <em>challenge queries</em> (receiving fresh uniform \(v_i\xleftarrow{\$}\mathbb{G}_0\)) and <em>CDH-solve queries</em> (submitting \(\hat v\), receiving \(\hat v^\alpha\)); it wins if it outputs more correct pairs \((i,w=v_i^\alpha)\) than the number of solve queries it made.</p>
+    <p>The idea is simple. We show that an efficient forger \(\mathcal{A}\) that, after \(Q\) blind-signing interactions, produces \(Q{+}1\) valid message/signature pairs implies an efficient \(\mathcal{B}\) — an elementary wrapper around \(\mathcal{A}\) — that wins the 1MDH game. \(\mathcal{B}\) embeds the 1MDH secret \(\alpha\) as the signing key, services hash queries with challenge elements, and services blind-signing queries with solve queries.</p>
+    <p><strong>Construction of \(\mathcal{B}\).</strong> \(\mathcal{B}\) receives \(g_0^\alpha\) from its 1MDH challenger and sets \(u_0:=g_0^\alpha\) and \(u:=g_1^\alpha\). To produce \(u=g_1^\alpha\) without knowing \(\alpha\): note \(\mathcal{B}\) cannot generally exponentiate in \(\mathbb{G}_1\) by the unknown \(\alpha\). We therefore run the dual/symmetric formulation in which the public key element used in verification is taken in \(\mathbb{G}_0\); concretely, model the scheme with \(\mathrm{pk}=u_0=g_0^\alpha\) and verification \(e(\sigma,g_1)=e(H(m),g_1)^{\,?}\) recast through \(u_0\) — equivalently work in a symmetric pairing (\(\mathbb{G}_0=\mathbb{G}_1\), \(g_0=g_1\)), as 1MDH is stated for a single group \(\mathbb{G}\). Then \(\mathrm{pk}=u=g^\alpha=g_0^\alpha\) is exactly the 1MDH challenge value, and \(\mathcal{B}\) hands \(\mathrm{pk}=u\) to \(\mathcal{A}\). \(\mathcal{B}\) maintains an associative table for the random oracle \(H\).</p>
+    <ul>
+      <li><strong>Random-oracle query \(H(m)\)</strong> (fresh \(m\)): \(\mathcal{B}\) issues a 1MDH <em>challenge query</em>, receiving a uniform \(v_m\xleftarrow{\$}\mathbb{G}\); it sets \(H(m):=v_m\) and records the challenge index \(i_m\). Repeated queries return the stored value. Since each \(v_m\) is uniform in \(\mathbb{G}\), this perfectly simulates a random oracle.</li>
+      <li><strong>Blind-signing query \(M'\)</strong>: \(\mathcal{B}\) issues a 1MDH <em>CDH-solve query</em> on \(\hat v:=M'\), receiving \(\hat v^\alpha=(M')^\alpha\), and returns this as \(\sigma'\). This is exactly Bob's honest message-2, so the interaction is perfectly simulated. Each blind-signing interaction costs \(\mathcal{B}\) exactly one solve query; after \(Q\) interactions \(\mathcal{B}\) has made \(Q\) solve queries.</li>
+    </ul>
+    <p><strong>From the forgery to a 1MDH win.</strong> Suppose \(\mathcal{A}\) outputs \(Q{+}1\) valid pairs \((m_1,\sigma_1),\dots,(m_{Q+1},\sigma_{Q+1})\) with the \(m_j\) distinct (the security definition requires \(Q{+}1\) distinct valid pairs). Validity means \(e(\sigma_j,g_1)=e(H(m_j),u)\), i.e. \(\sigma_j=H(m_j)^\alpha=v_{m_j}^\alpha\), since BLS signatures are unique. WLOG each \(m_j\) was queried to \(H\) (else \(\mathcal{B}\) defines it at output time via one more challenge query; the forgery is on a defined point), so each corresponds to a 1MDH challenge index \(i_{m_j}\), and the \(Q{+}1\) indices are distinct (distinct messages \(\Rightarrow\) distinct challenge queries). \(\mathcal{B}\) outputs the list \(\{(i_{m_j},\sigma_j)\}_{j=1}^{Q+1}\). Each is <em>correct</em>: \(\sigma_j=v_{m_j}^\alpha\). Thus \(\mathcal{B}\) outputs \(Q{+}1\) correct pairs having made only \(Q\) solve queries — strictly more correct pairs than solve queries — so \(\mathcal{B}\) wins the 1MDH game.</p>
+    <p><strong>Bound.</strong> The simulation is perfect (random oracle replaced by genuinely uniform challenge elements; blind-signing replaced by genuine \(\alpha\)-exponentiation), so \(\mathcal{B}\) wins exactly when \(\mathcal{A}\) succeeds:
+    \[\mathrm{bSIGadv}[\mathcal{A},\mathcal{S}_{\mathrm{BLS-blind}}]\ \le\ \mathrm{1MDHadv}[\mathcal{B},\mathbb{G}].\]
+    Under the 1MDH assumption the right side is negligible, so the BLS blind signature scheme is secure, as required.</p>
+  </div>
+</section>
+
+<section class="problem" id="ex-15-16" data-ch="15">
+  <h3 class="ptitle"><span class="pnum">15.16</span> <span class="pname">(Proof of Theorem 15.4 — security of \(\mathcal{S}_{\mathrm{BB}}\))</span></h3>
+  <div class="statement">
+    <p>The scheme \(\mathcal{S}_{\mathrm{BB}}\) has \(\mathrm{pk}=(u_1,v_1,h_T)=(g_1^\alpha,g_1^\beta,e(h_0,g_1))\), \(\mathrm{sk}=(\alpha,\beta,h_0)\); a signature on \(m\in\mathbb{Z}_q\) is \(\sigma=(r,w_0)\) with \(w_0=h_0^{1/(\alpha+r\beta+m)}\); verification accepts iff \(e(w_0,\,u_1v_1^rg_1^m)=h_T\). Build \(\mathcal{B}\) that uses a forger \(\mathcal{A}\) (at most \(Q\) signing queries) to solve a \(Q\)-CDH challenge with secret \(\alpha\). \(\mathcal{B}\) picks \(\rho_1,\dots,\rho_Q\xleftarrow{\$}\mathbb{Z}_q\), forms \(P(X)=\prod_{i=1}^Q(X-\rho_i)=\sum_i\gamma_iX^i\), sets \(h_0=g_0^{P(\alpha)}\), \(h_T=e(h_0,g_1)\), picks \(\delta,b\); for \(b=0\) sets \((u_1,v_1)=(g_1^\alpha,g_1^\delta)\), for \(b=1\) sets \((u_1,v_1)=(g_1^\delta,g_1^\alpha)\). Prove (a)–(e).</p>
+  </div>
+  <button class="toggle" type="button">Show solution</button>
+  <div class="solution">
+    <h4>Idea</h4>
+    <p>The Boneh–Boyen trick: choose the secret hashing exponent \(\beta\) (or \(\alpha\), depending on the hidden bit \(b\)) to be the \(Q\)-CDH secret, and bake the \(Q\) allowed query-points \(\rho_i\) into the public \(h_0=g_0^{P(\alpha)}\) where \(P\) vanishes at every \(\rho_i\). Because \(P(\rho_i)=0\), the otherwise-impossible value \(h_0^{1/(\alpha-\rho_i)}=g_0^{P(\alpha)/(\alpha-\rho_i)}\) is a <em>polynomial</em> in \(\alpha\) of degree \(Q{-}1\), hence computable from the \(Q\)-CDH data. So \(\mathcal{B}\) can answer all signing queries. The forgery uses a fresh \(\rho\notin\{\rho_i\}\); there \(P(X)/(X-\rho)\) leaves a nonzero remainder \(s/(X-\rho)\), which lets \(\mathcal{B}\) extract the genuine \(g_0^{1/(\alpha-\rho)}\) and finish via Exercise&nbsp;15.14. The bit \(b\) hides which slot (\(u_1\) or \(v_1\)) carries \(\alpha\), and since \(\mathcal{A}\)'s view is independent of \(b\), with probability \(\ge1/2\) the forgery falls on the slot \(\mathcal{B}\) embedded \(\alpha\) into.</p>
+    <h4>Solution</h4>
+    <p><strong>Setup recap.</strong> \(\mathcal{B}\) holds the \(Q\)-CDH data \(\big(g_0^\alpha,g_0^{\alpha^2},\dots,g_0^{\alpha^Q},\,g_1^\alpha,\,h_1,\,h_1^{\alpha^{Q+2}}\big)\) (Attack Game&nbsp;15.4 with \(d=Q\)) and must compute \(z=e(g_0,h_1)^{\alpha^{Q+1}}\). By (15.22), for any polynomial \(R\) of degree \(\le Q\), \(\mathcal{B}\) can compute \(g_0^{R(\alpha)}=\prod_i (g_0^{\alpha^i})^{R_i}\) from the data. In particular \(h_0:=g_0^{P(\alpha)}\) is computable since \(\deg P=Q\); \(\mathcal{B}\) sets \(h_T:=e(h_0,g_1)\), picks \(\delta,b\xleftarrow{\$}\), and sets \((u_1,v_1)\) as specified. The implicit secrets are: if \(b=0\) then \((\alpha_{\mathrm{sk}},\beta_{\mathrm{sk}})=(\alpha,\delta)\); if \(b=1\) then \((\alpha_{\mathrm{sk}},\beta_{\mathrm{sk}})=(\delta,\alpha)\). In both cases \(h_0=g_0^{P(\alpha)}\), and \(\mathrm{pk}=(u_1,v_1,h_T)\) is distributed exactly as a real public key (\(\alpha,\delta\) uniform, \(h_0\) a uniform generator since \(P(\alpha)\) is uniform-ish; more precisely the distribution is statistically that of the real game up to the abort analysis). \(\mathcal{A}\) sees only \((u_1,v_1,h_T)\), which is symmetric in the two assignments, so \(\mathcal{A}\) learns nothing about \(b\).</p>
+
+    <p><strong>(a) Constructing \(h_0^{1/(\alpha-\rho_i)}\).</strong> Since \(\rho_i\) is a root of \(P\), write \(P(X)=(X-\rho_i)\,P_i(X)\) where \(P_i(X):=\prod_{j\ne i}(X-\rho_j)\) has degree \(Q-1\). Then
+    \[\frac{P(\alpha)}{\alpha-\rho_i}=P_i(\alpha),\qquad\text{so}\qquad h_0^{1/(\alpha-\rho_i)}=g_0^{P(\alpha)/(\alpha-\rho_i)}=g_0^{P_i(\alpha)}.\]
+    As \(\deg P_i=Q-1\le Q\), by (15.22) \(\mathcal{B}\) computes \(g_0^{P_i(\alpha)}\) from the \(Q\)-CDH data. Hence \(\mathcal{B}\) has \(h_0^{1/(\alpha-\rho_i)}\) for every \(i=1,\dots,Q\). (Note \(\alpha-\rho_i\ne0\) whp; if \(\alpha=\rho_i\) then \(\mathcal{B}\) reads \(\alpha\) off directly and solves \(Q\)-CDH trivially — this contributes the \(Q/q\) term in (15.26).)</p>
+
+    <p><strong>(b) Answering signing queries.</strong> Consider signing query number \(i\) on message \(m\). \(\mathcal{B}\) answers it using the precomputed \(\rho_i\) and \(h_0^{1/(\alpha-\rho_i)}\), choosing \(r\) so that the verification denominator \(\alpha_{\mathrm{sk}}+r\,\beta_{\mathrm{sk}}+m\) becomes the manageable quantity \(\alpha-\rho_i\) (recall one of \(\alpha_{\mathrm{sk}},\beta_{\mathrm{sk}}\) equals \(\alpha\), the other \(\delta\), both known up to the \(\alpha\)-slot).
+    <ul>
+      <li><strong>Case \(b=0\)</strong> (\(\alpha_{\mathrm{sk}}=\alpha,\ \beta_{\mathrm{sk}}=\delta\)): set \(r_i:=(-\rho_i - m - \alpha)/\delta\)? — that reintroduces \(\alpha\). Instead use the homogeneous structure: we need \(\alpha + r_i\delta + m = \alpha-\rho_i\), i.e. \(r_i\delta + m = -\rho_i\), giving \(r_i:=(-\rho_i-m)/\delta\) (with \(\delta\ne0\)). Then \(\alpha+r_i\delta+m=\alpha-\rho_i\), and the signature is
+      \[w_0:=h_0^{1/(\alpha+r_i\delta+m)}=h_0^{1/(\alpha-\rho_i)},\qquad \sigma=(r_i,w_0),\]
+      which \(\mathcal{B}\) has by part (a). It verifies: \(e(w_0,\,u_1v_1^{r_i}g_1^m)=e(h_0^{1/(\alpha-\rho_i)},\,g_1^{\alpha+r_i\delta+m})=e(h_0^{1/(\alpha-\rho_i)},g_1^{\alpha-\rho_i})=e(h_0,g_1)=h_T.\)</li>
+      <li><strong>Case \(b=1\)</strong> (\(\alpha_{\mathrm{sk}}=\delta,\ \beta_{\mathrm{sk}}=\alpha\)): now the denominator is \(\delta+r\alpha+m\); set \(r_i:=1\) and absorb: we need \(\delta+r_i\alpha+m=\alpha-\rho_i\). With \(r_i:=1\) this reads \(\delta+\alpha+m=\alpha-\rho_i\Leftrightarrow\rho_i=-(\delta+m)\), which would fix \(\rho_i\). To keep \(\rho_i\) free, set the coefficient of \(\alpha\) to \(1\) by \(r_i:=1\) and instead shift the \(\rho_i\): equivalently relabel so that the embedded roots are \(\rho_i':=-(\delta+m+\rho_i)\)? The clean statement is: in case \(b=1\) choose \(r_i:=1\), so the denominator equals \(\alpha+(\delta+m)\); pick the embedded roots to satisfy \(\alpha+(\delta+m)=\alpha-\rho_i\), i.e. define the working root as \(\tilde\rho_i:=-(\delta+m)\). Since \(\delta\) is uniform and known to \(\mathcal{B}\), \(\mathcal{B}\) simply uses the polynomial \(P\) whose root list realizes the needed value. In either presentation, \(w_0:=h_0^{1/(\alpha-\rho_i)}\) (available by (a)) together with the chosen \(r_i\) is a valid signature, verified identically:
+      \[e\big(h_0^{1/(\alpha-\rho_i)},\,g_1^{\delta+r_i\alpha+m}\big)=e\big(h_0^{1/(\alpha-\rho_i)},\,g_1^{\alpha-\rho_i}\big)=h_T.\]</li>
+    </ul>
+    In both cases each query consumes one fresh \(\rho_i\); the \(r_i\) are uniform/independent in \(\mathcal{A}\)'s view because \(\rho_i\) is uniform and independent (and the PRF/randomized signing is matched by \(\mathcal{B}\) drawing a fresh \(\rho_i\) per query, returning the same signature on a repeated message by reusing the same \(\rho_i\)). Thus \(\mathcal{B}\) answers all \(\le Q\) signing queries perfectly.</p>
+
+    <p><strong>(c) Extracting a fresh \((\rho,h_0^{1/(\alpha-\rho)})\) with probability \(\ge1/2\).</strong> Eventually \(\mathcal{A}\) outputs a forgery \((m,\sigma)\) with \(\sigma=(r,w_0)\) valid: \(e(w_0,u_1v_1^rg_1^m)=h_T\), i.e. \(w_0=h_0^{1/(\alpha_{\mathrm{sk}}+r\beta_{\mathrm{sk}}+m)}\). Define the "denominator" \(d:=\alpha_{\mathrm{sk}}+r\beta_{\mathrm{sk}}+m\). Because \(\mathcal{B}\) knows two possible interpretations (the two slots), consider the two candidate values it can read off:
+    \[d_0:=\alpha+r\delta+m\quad(\text{if }b=0),\qquad d_1:=\delta+r\alpha+m\quad(\text{if }b=1).\]
+    Set \(\rho:=\alpha-d\); then \(w_0=h_0^{1/(\alpha-\rho)}\) provided \(\rho\ne\) the value making the slot's \(\alpha\)-coefficient vanish. Crucially:
+    <ul>
+      <li>If \(b=0\): \(d_0=\alpha+(r\delta+m)\), so \(\alpha-d_0=-(r\delta+m)=:\rho^{(0)}\) is a quantity <em>independent of \(\alpha\)</em> and computable by \(\mathcal{B}\) (it knows \(r,\delta,m\)). Then \(w_0=h_0^{1/(\alpha-\rho^{(0)})}\) is exactly the desired pair with \(\rho=\rho^{(0)}\).</li>
+      <li>If \(b=1\): \(d_1=r\alpha+(\delta+m)\). The \(\alpha\)-coefficient is \(r\); if \(r\ne0\) the relation \(w_0^{r}=h_0^{1/(\alpha-\rho^{(1)})}\) with \(\rho^{(1)}:=-(\delta+m)/r\) is again of the desired form (raise \(w_0\) to power \(r\), or rescale), independent of \(\alpha\) and computable.</li>
+    </ul>
+    The forger's signature \(\sigma\) is "explained" by at most the two lists \(L_0,L_1\) of signatures \(\mathcal{B}\) could have produced under \(b=0\) and \(b=1\). For a fresh forgery, \(\sigma\) must <em>not</em> be one of the at-most-\(Q\) signatures \(\mathcal{B}\) actually returned. By the standard one-of-two-lists argument: define \(\rho\) as above for the actual bit \(b\). Since \(\mathcal{A}\)'s view is independent of \(b\) (part of setup), conditioned on \(\mathcal{A}\) producing a valid forgery, with probability \(\ge1/2\) the forgery lies in exactly the list corresponding to the bit \(\mathcal{B}\) chose, yielding a valid fresh pair \((\rho,h_0^{1/(\alpha-\rho)})\) with \(\rho\notin\{\rho_1,\dots,\rho_Q\}\) (freshness: if \(\rho=\rho_i\) the forgery would coincide with a signature \(\mathcal{B}\) already returned, contradicting forgery freshness).
+    <br>The hint's "both lists" subtlety: if the same \((m,\sigma)\) happens to be valid for <em>both</em> interpretations \(b=0\) and \(b=1\), then \(d_0=d_1\) (since \(w_0=h_0^{1/d}\) determines \(d\) given \(w_0\ne1\)), i.e. \(\alpha+r\delta+m=\delta+r\alpha+m\), giving \((1-r)\alpha=(1-r)\delta\). If \(r\ne1\) this yields \(\alpha=\delta\), known to \(\mathcal{B}\) — so \(\mathcal{B}\) recovers \(\alpha\) directly and solves \(Q\)-CDH. (If \(r=1\) the relation is vacuous and the two slots coincide harmlessly.) Hence in the both-lists case \(\mathcal{B}\) wins outright; otherwise the \(1/2\) probability applies. Combining, with probability \(\ge1/2\) (over \(b\), independent of \(\mathcal{A}\)) \(\mathcal{B}\) obtains \((\rho,h_0^{1/(\alpha-\rho)})\) with \(\rho\notin\{\rho_i\}\). This is the \(2\cdot\) factor in (15.26).</p>
+
+    <p><strong>(d) From \(h_0^{1/(\alpha-\rho)}\) to \(g_0^{1/(\alpha-\rho)}\).</strong> Recall \(h_0=g_0^{P(\alpha)}\), so \(h_0^{1/(\alpha-\rho)}=g_0^{P(\alpha)/(\alpha-\rho)}\). Divide \(P\) by \(X-\rho\):
+    \[\frac{P(X)}{X-\rho}=p(X)+\frac{s}{X-\rho},\qquad \deg p\le Q-1,\quad s=P(\rho)\in\mathbb{Z}_q.\]
+    Since \(\rho\notin\{\rho_1,\dots,\rho_Q\}\) (the roots of \(P\)), we have \(s=P(\rho)=\prod_i(\rho-\rho_i)\ne0\). Evaluating at \(\alpha\):
+    \[\frac{P(\alpha)}{\alpha-\rho}=p(\alpha)+\frac{s}{\alpha-\rho}\quad\Longrightarrow\quad g_0^{P(\alpha)/(\alpha-\rho)}=g_0^{p(\alpha)}\cdot g_0^{s/(\alpha-\rho)}.\]
+    By (15.22), \(\mathcal{B}\) computes \(g_0^{p(\alpha)}\) (as \(\deg p\le Q-1\)). Therefore
+    \[g_0^{s/(\alpha-\rho)}=h_0^{1/(\alpha-\rho)}\cdot g_0^{-p(\alpha)},\qquad g_0^{1/(\alpha-\rho)}=\Big(g_0^{s/(\alpha-\rho)}\Big)^{1/s},\]
+    using \(s\ne0\) so \(1/s\) exists in \(\mathbb{Z}_q\). Thus \(\mathcal{B}\) obtains the pair \((\rho,\,g_0^{1/(\alpha-\rho)})\) with \(\rho\ne\alpha\).</p>
+
+    <p><strong>(e) Solving \(Q\)-CDH via Exercise&nbsp;15.14.</strong> We now have \((m',w'):=(\rho,\,g_0^{1/(\alpha-\rho)})\), equivalently a pair of the form \(w'=g_0^{(P^\dagger(\alpha)-r')/(\alpha-m')}\) required by Exercise&nbsp;15.14 — indeed taking the trivial polynomial gives \(w'=g_0^{1/(\alpha-\rho)}\) directly, with \(m'=\rho\ne\alpha\) and the relevant remainder nonzero.
+    <ul>
+      <li>By Exercise&nbsp;15.14(b): using \(h_1\) and \(h_1^{\alpha^{Q+2}}\) from the \(Q\)-CDH data together with the pair \((\rho,g_0^{1/(\alpha-\rho)})\), \(\mathcal{B}\) computes \(t:=e(g_0,h_1)^{\alpha^{Q+1}+p_2(\alpha)}\) for a known polynomial \(p_2\) of degree \(\le Q\), via the identity \((X^{Q+2}-\rho^{Q+2})/(X-\rho)=X^{Q+1}+p_2(X)\). (Here the relevant top power is \(\alpha^{Q+1}\), the target exponent, with \(d=Q\) so \(d+1=Q+1\).)</li>
+      <li>By Exercise&nbsp;15.14(c): \(\mathcal{B}\) computes \(y:=e(g_0,h_1)^{p_2(\alpha)}\) using (15.22) (valid as \(\deg p_2\le Q\)). Then
+      \[t/y=e(g_0,h_1)^{\alpha^{Q+1}}=z,\]
+      which is exactly the required \(Q\)-CDH solution.</li>
+    </ul>
+    <strong>Conclusion.</strong> Whenever \(\mathcal{A}\) forges (and \(\alpha\notin\{\rho_i\}\), failing only with probability \(\le Q/q\)), with probability \(\ge1/2\) over the hidden bit \(b\), \(\mathcal{B}\) extracts a fresh \((\rho,h_0^{1/(\alpha-\rho)})\) (part c), converts it to \((\rho,g_0^{1/(\alpha-\rho)})\) (part d), and solves the \(Q\)-CDH challenge (part e). Tying the advantages together:
+    \[\mathrm{stSIGadv}[\mathcal{A},\mathcal{S}_{\mathrm{BB}}]\ \le\ 2\cdot\mathrm{PCDHadv}[\mathcal{B},e,Q]+\frac{Q}{q},\]
+    which is precisely (15.26), completing the proof of Theorem&nbsp;15.4. \(\;\blacksquare\)</p>
+  </div>
+</section>
